@@ -715,8 +715,7 @@
                 return date.toISOString().split('T')[0];
             },
             
-            getPromoPosition(promoId, date) {
-                const p = this.data.find(x => x.id === promoId);
+            getPromoPosition(p, date) {
                 if (!p) return 'single';
                 
                 const prevDate = this.addDays(date, -1);
@@ -772,12 +771,13 @@
                     let cell = '<div class="day-cell' + (promos.length ? ' has-promo' : '') + (isToday ? ' today' : '') + '" onclick="cal.dayClick(\''+date+'\')">';
                     cell += '<div style="color: #999; font-size: 13px; font-weight: 700; margin-bottom: 0.3rem;">' + d + '</div>';
                     promos.forEach(p => {
+                        const dataIdx = this.data.indexOf(p);
                         const txt = this.getPromoText(p);
                         const col = {'29cm':'b-29cm','musinsa':'b-musinsa','own':'b-own','global':'b-global'}[p.key] || 'b-29cm';
-                        const pos = this.getPromoPosition(p.id, date);
+                        const pos = this.getPromoPosition(p, date);
                         const lines = txt.split('\n').length;
                         const height = Math.min(lines, 3) * 1.3 + 0.4;
-                        cell += '<div class="promo-item ' + col + ' ' + pos + '" onclick="cal.showEdit(\''+p.id+'\'); event.stopPropagation();" title="'+p.name+'" style="min-height: ' + height + 'em; white-space: pre-wrap; word-break: break-word;">' + txt.split('\n').slice(0,3).join('\n') + '</div>';
+                        cell += '<div class="promo-item ' + col + ' ' + pos + '" onclick="cal.showEdit('+dataIdx+'); event.stopPropagation();" title="'+p.name+'" style="min-height: ' + height + 'em; white-space: pre-wrap; word-break: break-word;">' + txt.split('\n').slice(0,3).join('\n') + '</div>';
                     });
                     cell += '</div>';
                     html += cell;
@@ -793,15 +793,17 @@
                 this.showForm(true);
             },
             
-            showEdit(id) {
-                this.editId = id;
+            showEdit(dataIdx) {
+                const p = this.data[dataIdx];
+                if (!p) return;
+                this.editId = p.id;
                 this.selectedFile = null;
                 this.showForm(false);
             },
-            
+
             showForm(isNew) {
                 const p = isNew ? null : this.data.find(x => x.id === this.editId);
-                if (!isNew && !p) { alert('프로모션을 찾을 수 없습니다.'); return; }
+                if (!isNew && !p) return;
                 document.getElementById('modalTitle').textContent = isNew ? '프로모션 추가' : p.name;
                 
                 let html = '';
