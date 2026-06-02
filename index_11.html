@@ -1,0 +1,1820 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VLVD 프로모션 캘린더</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <style>
+        :root {
+            --bg: #f6f7f9;
+            --surface: #ffffff;
+            --surface-2: #f8f9fb;
+            --ink: #1a1d21;
+            --ink-soft: #5b6470;
+            --ink-faint: #99a1ad;
+            --line: #e8eaed;
+            --line-soft: #f0f1f3;
+            --accent: #1a1d21;
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+            --shadow-card: 0 1px 3px rgba(16,24,40,0.04), 0 1px 2px rgba(16,24,40,0.03);
+            --shadow-soft: 0 4px 16px rgba(16,24,40,0.06);
+            --font: 'Pretendard', 'Pretendard Variable', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', 'Noto Sans KR', sans-serif;
+            --sidebar-w: 240px;
+            --content-max: 1180px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: var(--font); background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; letter-spacing: -0.01em; }
+        .container { display: flex; height: 100vh; flex-direction: column; }
+        .top-bar { 
+            background: var(--surface); 
+            border-bottom: 1px solid var(--line); 
+            padding: 0.85rem 2rem; 
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 2rem;
+        }
+        .month-control { display: flex; align-items: center; gap: 1rem; }
+        .month-btn { background: var(--surface-2); border: 1px solid var(--line); width: 34px; height: 34px; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; color: var(--ink-soft); transition: all 0.18s; display: inline-flex; align-items: center; justify-content: center; }
+        .month-btn:hover { background: #eef0f3; color: var(--ink); }
+        .month-label { font-size: 16px; font-weight: 700; min-width: 130px; text-align: center; letter-spacing: -0.02em; }
+        
+        .controls-center { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            gap: 2rem;
+        }
+        
+        .channel-filter { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+        .channel-btn { padding: 0.45rem 0.95rem; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; font-size: 12.5px; font-weight: 500; background: var(--surface); color: var(--ink-soft); transition: all 0.18s; }
+        .channel-btn:hover { background: var(--surface-2); }
+        .channel-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+        
+        .platform-links { 
+            display: flex; 
+            gap: 0.6rem;
+        }
+        
+        .platform-link { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            min-width: 60px;
+            height: 40px;
+            border-radius: var(--radius-sm); 
+            border: 1px solid var(--line);
+            text-decoration: none; 
+            cursor: pointer;
+            transition: all 0.18s;
+            background: var(--accent);
+            color: #fff;
+            font-size: 12.5px;
+            font-weight: 600;
+            padding: 0 0.9rem;
+            text-align: center;
+        }
+        
+        .platform-link:hover { 
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-soft);
+        }
+        
+        .controls-right {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            justify-content: flex-end;
+        }
+        
+        .view-buttons { display: flex; gap: 0.25rem; background: var(--surface-2); padding: 3px; border-radius: var(--radius-sm); border: 1px solid var(--line); }
+        .view-btn { background: transparent; border: none; padding: 0.4rem 0.8rem; border-radius: 7px; cursor: pointer; font-size: 12.5px; font-weight: 500; color: var(--ink-soft); transition: all 0.18s; }
+        .view-btn.active { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(16,24,40,0.06); }
+        
+        .settings-btn { background: var(--surface-2); border: 1px solid var(--line); width: 38px; height: 38px; border-radius: var(--radius-sm); cursor: pointer; font-size: 14px; transition: all 0.18s; }
+        .settings-btn:hover { background: #eef0f3; }
+        
+        .upload-btn { background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); padding: 0.5rem 0.95rem; border-radius: var(--radius-sm); cursor: pointer; font-size: 12.5px; font-weight: 600; transition: all 0.18s; }
+        .upload-btn:hover { background: #eef0f3; }
+        
+        .main { flex: 1; display: block; background: var(--bg); overflow-y: auto; }
+        .content { flex: 1; padding: 2.25rem 2rem 3rem; max-width: var(--content-max); margin: 0 auto; width: 100%; }
+        .calendar { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow-card); }
+        
+
+        .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--line); padding-bottom: 0.6rem; }
+        .weekday { text-align: center; font-size: 11.5px; font-weight: 600; color: var(--ink-faint); padding: 0.4rem; letter-spacing: 0.02em; }
+        
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+            auto-rows: max-content;
+        }
+        
+        .day-cell {
+            min-height: 56px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-sm);
+            padding: 0.7rem;
+            background: var(--surface-2);
+            cursor: pointer;
+            transition: all 0.18s;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--ink-soft);
+        }
+        
+        .day-cell:hover { background: #eef0f3; border-color: #d8dce1; }
+        .day-cell.empty { background: transparent; border: none; cursor: default; }
+        .day-cell.has-promo { background: var(--surface); }
+        
+        .day-cell.today {
+            background: var(--surface);
+            border: 1.5px solid var(--ink);
+            box-shadow: 0 0 0 3px rgba(26,29,33,0.06);
+        }
+        
+        .day-cell.today > div:first-child {
+            color: var(--ink);
+            font-weight: 700;
+        }
+        
+        .promo-item {
+            padding: 0.5rem 0.7rem;
+            font-size: 11px;
+            color: #fff;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            margin-top: 0.3rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: all 0.2s;
+            line-height: 1.3;
+            border-radius: 12px;
+        }
+        
+        .promo-item:hover { opacity: 0.9; }
+        
+        .promo-item.first { 
+            border-radius: 12px 0 0 12px;
+            margin-right: -2px;
+            padding-right: 0.6rem;
+        }
+        
+        .promo-item.middle { 
+            border-radius: 0;
+            margin-left: -2px;
+            margin-right: -2px;
+            padding-left: 0.7rem;
+            padding-right: 0.7rem;
+        }
+        
+        .promo-item.last { 
+            border-radius: 0 12px 12px 0;
+            margin-left: -2px;
+            padding-left: 0.6rem;
+        }
+        
+        .promo-item.single { 
+            border-radius: 12px;
+            margin: 0;
+        }
+        
+        .b-29cm { background: var(--color-29cm); }
+        .b-musinsa { background: var(--color-musinsa); }
+        .b-own { background: var(--color-own); }
+        .b-global { background: var(--color-global); }
+        
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 1rem; }
+        .modal.show { display: flex; }
+        .modal-box { background: #fff; border-radius: 8px; padding: 2rem; max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid #e0e0e0; padding-bottom: 1rem; }
+        .modal-header h2 { font-size: 18px; font-weight: 600; }
+        .close { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-label { font-size: 11px; font-weight: 600; color: #666; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-input { width: 100%; padding: 0.7rem 0.85rem; border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: 14px; font-family: inherit; color: var(--ink); background: var(--surface); }
+        .form-input:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px rgba(26,29,33,0.07); }
+        .form-value { font-size: 14px; padding: 0.75rem; background: #f5f5f5; border-radius: 4px; word-break: break-all; }
+        .form-buttons { display: flex; gap: 1rem; margin-top: 2rem; }
+        .btn { padding: 0.75rem 1.5rem; border: 1px solid #e0e0e0; border-radius: 4px; cursor: pointer; flex: 1; font-size: 14px; font-weight: 600; transition: all 0.2s; }
+        .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .btn-primary:hover { opacity: 0.88; }
+        .btn-secondary { background: var(--surface-2); color: var(--ink); border: 1px solid var(--line); }
+        .btn-secondary:hover { background: #eef0f3; }
+        
+        .file-input-btn {
+            padding: 1rem;
+            background: #f9f9f9;
+            border: 2px dashed #d0d0d0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            text-align: center;
+            transition: all 0.2s;
+            display: block;
+            width: 100%;
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .file-input-btn:hover {
+            background: #f0f7ff;
+            border-color: #1976d2;
+            color: #1976d2;
+        }
+        
+        .file-input-btn.active {
+            background: #f0f7ff;
+            border-color: #388e3c;
+            color: #388e3c;
+        }
+        
+        .file-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 0.5rem;
+            word-break: break-all;
+            text-align: center;
+        }
+        
+        .file-info.selected {
+            color: #388e3c;
+            font-weight: 600;
+        }
+        
+        #analyzeFile {
+            display: none;
+        }
+        
+        .color-picker-group {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .color-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .color-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            min-width: 70px;
+        }
+        
+        .color-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+        }
+        
+        .color-input {
+            width: 50px;
+            height: 40px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .color-value {
+            font-size: 12px;
+            color: #999;
+            font-family: monospace;
+        }
+        
+        .analysis-info {
+            background: #f0f7ff;
+            border: 1px solid #b3e5fc;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            margin: 0.6rem 0;
+            gap: 1rem;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #666;
+            min-width: 80px;
+        }
+        
+        .info-value {
+            color: #1976d2;
+            font-weight: 600;
+            flex: 1;
+        }
+        
+        .info-row input,
+        .info-row select {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .platform-banner {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            padding: 1.1rem 1.5rem;
+            margin-top: 1.5rem;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            box-shadow: var(--shadow-card);
+        }
+        
+        .banner-label {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--ink-soft);
+            min-width: 100px;
+            white-space: nowrap;
+        }
+        
+        .platform-banner .platform-links {
+            display: flex;
+            gap: 0.75rem;
+            flex: 1;
+        }
+        
+        .platform-banner .platform-link {
+            flex: 1;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--accent);
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.18s;
+            background: var(--accent);
+            color: #fff;
+            font-size: 12.5px;
+            font-weight: 600;
+            text-align: center;
+            min-width: auto;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .platform-banner .platform-link:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-soft);
+        }
+
+        /* ===== 페이지 네비게이션 ===== */
+        .nav-buttons { display: flex; gap: 0.25rem; background: var(--surface-2); padding: 4px; border-radius: 999px; border: 1px solid var(--line); }
+        .nav-btn {
+            padding: 0.5rem 1.1rem; border: none; border-radius: 999px;
+            cursor: pointer; font-size: 13px; background: transparent; font-weight: 600;
+            transition: all 0.18s; color: var(--ink-soft);
+        }
+        .nav-btn.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(16,24,40,0.08); }
+        .nav-btn:hover:not(.active) { color: var(--ink); }
+
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* 캘린더 위 필터바 */
+        .calendar-filter-bar {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.75rem 0; margin-bottom: 0.5rem; flex-wrap: wrap;
+        }
+        .calendar-filter-bar .filter-label { font-size: 12.5px; color: var(--ink-faint); font-weight: 600; margin-right: 0.25rem; }
+
+        /* ===== 분석 페이지 ===== */
+        .analysis-wrap { padding: 2.25rem 2rem 3rem; max-width: var(--content-max); margin: 0 auto; width: 100%; }
+        .analysis-section { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.75rem; margin-bottom: 1.5rem; box-shadow: var(--shadow-card); }
+        .analysis-section h2 { font-size: 19px; margin-bottom: 0.4rem; color: var(--ink); letter-spacing: -0.02em; font-weight: 700; }
+        .analysis-section .sub { font-size: 13px; color: var(--ink-faint); margin-bottom: 1.4rem; line-height: 1.6; }
+
+        .stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+        .stat-card { background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: var(--radius-md); padding: 1.2rem 1.3rem; }
+        .stat-card .label { font-size: 12px; color: var(--ink-faint); margin-bottom: 0.5rem; font-weight: 500; }
+        .stat-card .value { font-size: 26px; font-weight: 700; color: var(--ink); letter-spacing: -0.03em; }
+        .stat-card .value.small { font-size: 17px; }
+
+        .ana-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .ana-table th, .ana-table td { padding: 0.7rem 0.85rem; text-align: left; border-bottom: 1px solid var(--line-soft); }
+        .ana-table th { background: var(--surface-2); font-weight: 600; color: var(--ink-soft); position: sticky; top: 0; cursor: pointer; user-select: none; font-size: 12px; }
+        .ana-table th:hover { background: #eef1f3; }
+        .ana-table td.num, .ana-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+        .ana-table tbody tr:hover { background: var(--surface-2); }
+        .table-scroll { max-height: 460px; overflow-y: auto; border: 1px solid var(--line-soft); border-radius: var(--radius-md); }
+
+        .badge { display: inline-block; padding: 0.2rem 0.55rem; border-radius: 999px; font-size: 11px; font-weight: 600; color: #fff; }
+
+        .bar-track { background: var(--line); border-radius: 999px; height: 7px; overflow: hidden; min-width: 60px; }
+        .bar-fill { height: 100%; border-radius: 4px; }
+
+        .forecast-controls { display: flex; gap: 0.75rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+        .forecast-controls select, .forecast-controls input {
+            padding: 0.5rem 0.75rem; border: 1px solid var(--line); border-radius: var(--radius-sm); font-size: 13px;
+        }
+        .save-forecast-btn {
+            padding: 0.5rem 1rem; background: var(--accent); color: #fff; border: none;
+            border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 600;
+        }
+        .save-forecast-btn:hover { opacity: 0.88; }
+        .save-forecast-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .ana-empty { padding: 3rem; text-align: center; color: var(--ink-faint); font-size: 14px; }
+        .group-row { cursor: pointer; }
+        .group-detail td { background: var(--surface-2); padding: 0; }
+        .detail-inner { padding: 0.75rem 1.5rem; }
+        .detail-inner table { width: 100%; font-size: 12px; }
+        .detail-inner td { padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--line-soft); }
+        .sync-status { font-size: 12px; color: #888; margin-left: auto; }
+
+        /* ===== 반응형 ===== */
+        html, body { max-width: 100%; overflow-x: hidden; }
+        @media (max-width: 900px) {
+            .top-bar { grid-template-columns: 1fr; gap: 0.75rem; padding: 0.85rem 1rem; }
+            .controls-center { justify-content: flex-start; }
+            .controls-right { justify-content: flex-start; flex-wrap: wrap; }
+            .content, .analysis-wrap { padding-left: 1rem; padding-right: 1rem; }
+            .platform-banner { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+            .platform-banner .platform-links { flex-direction: column; }
+        }
+        @media (max-width: 640px) {
+            .weekdays { gap: 0.25rem; }
+            .cal-grid { gap: 0.25rem; }
+            .day-cell { min-height: 44px; padding: 0.4rem; font-size: 11px; }
+            .promo-item { font-size: 10px; padding: 0.35rem 0.4rem; }
+            .stat-cards { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="top-bar">
+            <div class="month-control">
+                <button class="month-btn" onclick="cal.prevMonth()">◀</button>
+                <div class="month-label" id="monthLabel">2025년 11월</div>
+                <button class="month-btn" onclick="cal.nextMonth()">▶</button>
+            </div>
+            
+            <div class="controls-center">
+                <div class="nav-buttons">
+                    <button class="nav-btn active" id="nav-calendar" onclick="cal.showPage('calendar')">📅 캘린더</button>
+                    <button class="nav-btn" id="nav-analysis" onclick="cal.showPage('analysis')">📊 프로모션 분석</button>
+                </div>
+            </div>
+            
+            <div class="controls-right">
+                <button class="upload-btn" onclick="cal.openFileUpload()" title="파일에서 자동으로 프로모션 추가">📤 파일 분석</button>
+                
+                <div class="view-buttons">
+                    <button class="view-btn" id="btn-brief" onclick="cal.setView('brief')">약식</button>
+                    <button class="view-btn active" id="btn-standard" onclick="cal.setView('standard')">표준</button>
+                    <button class="view-btn" id="btn-detailed" onclick="cal.setView('detailed')">자세히</button>
+                </div>
+                
+                <button class="settings-btn" onclick="cal.openSettings()" title="색상 설정">⚙️</button>
+            </div>
+        </div>
+
+        <div class="main">
+            <!-- ===== 캘린더 페이지 ===== -->
+            <div class="page active" id="page-calendar">
+                <div class="content">
+                    <div class="calendar-filter-bar">
+                        <span class="filter-label">플랫폼</span>
+                        <div class="channel-filter">
+                            <button class="channel-btn active" onclick="cal.setFilter('all')">전체</button>
+                            <button class="channel-btn" onclick="cal.setFilter('29cm')">29CM</button>
+                            <button class="channel-btn" onclick="cal.setFilter('musinsa')">무신사</button>
+                            <button class="channel-btn" onclick="cal.setFilter('own')">자사몰</button>
+                            <button class="channel-btn" onclick="cal.setFilter('global')">글로벌</button>
+                        </div>
+                    </div>
+                    <div class="calendar">
+                        <div class="weekdays">
+                            <div class="weekday">일</div>
+                            <div class="weekday">월</div>
+                            <div class="weekday">화</div>
+                            <div class="weekday">수</div>
+                            <div class="weekday">목</div>
+                            <div class="weekday">금</div>
+                            <div class="weekday">토</div>
+                        </div>
+                        <div class="cal-grid" id="calGrid"></div>
+                    </div>
+
+                    <div class="platform-banner">
+                        <div class="banner-label">📱 플렛폼 바로가기</div>
+                        <div class="platform-links">
+                            <a href="https://www.29cm.co.kr/store/brand/100816?sort=RECOMMENDED&page=1&brandId=100816" target="_blank" class="platform-link" title="29CM으로 이동">29CM</a>
+                            <a href="https://www.musinsa.com/brand/vivalavida?gf=A" target="_blank" class="platform-link" title="무신사로 이동">무신사</a>
+                            <a href="https://vlvd.kr/" target="_blank" class="platform-link" title="자사몰로 이동">VLVD</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 분석 페이지 ===== -->
+            <div class="page" id="page-analysis">
+                <div class="analysis-wrap" id="analysisWrap">
+                    <!-- JS로 렌더링 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2 id="modalTitle"></h2>
+                <button class="close" onclick="cal.closeModal()">✕</button>
+            </div>
+            <div id="modalContent"></div>
+            <div class="form-buttons">
+                <button class="btn btn-secondary" onclick="cal.closeModal()">취소</button>
+                <button class="btn btn-primary" id="saveBtn" style="display:none;" onclick="cal.save()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="uploadModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2>파일 분석 및 프로모션 추가</h2>
+                <button class="close" onclick="cal.closeFileUpload()">✕</button>
+            </div>
+            <div id="uploadContent">
+                <div class="form-group">
+                    <div class="form-label">Excel 또는 CSV 파일 선택</div>
+                    <input type="file" id="analyzeFile" accept=".xlsx,.xls,.csv">
+                    <button class="file-input-btn" onclick="document.getElementById('analyzeFile').click()">
+                        📁 파일 선택
+                    </button>
+                    <div id="fileStatus" class="file-info"></div>
+                </div>
+                <div id="analysisResult"></div>
+            </div>
+            <div class="form-buttons">
+                <button class="btn btn-secondary" onclick="cal.closeFileUpload()">취소</button>
+                <button class="btn btn-primary" id="registerBtn" style="display:none;" onclick="cal.registerFromFile()">등록</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="settingsModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2>플랫폼 색상 설정</h2>
+                <button class="close" onclick="cal.closeSettings()">✕</button>
+            </div>
+            <div id="settingsContent">
+                <div class="color-picker-group">
+                    <div class="color-item">
+                        <div class="color-label">29CM</div>
+                        <div class="color-input-wrapper">
+                            <input type="color" class="color-input" id="color-29cm" onchange="cal.updateColor('29cm', this.value)">
+                            <div class="color-value" id="color-29cm-text">#1976d2</div>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-label">무신사</div>
+                        <div class="color-input-wrapper">
+                            <input type="color" class="color-input" id="color-musinsa" onchange="cal.updateColor('musinsa', this.value)">
+                            <div class="color-value" id="color-musinsa-text">#388e3c</div>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-label">자사몰</div>
+                        <div class="color-input-wrapper">
+                            <input type="color" class="color-input" id="color-own" onchange="cal.updateColor('own', this.value)">
+                            <div class="color-value" id="color-own-text">#f57c00</div>
+                        </div>
+                    </div>
+                    <div class="color-item">
+                        <div class="color-label">글로벌</div>
+                        <div class="color-input-wrapper">
+                            <input type="color" class="color-input" id="color-global" onchange="cal.updateColor('global', this.value)">
+                            <div class="color-value" id="color-global-text">#7b1fa2</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-buttons">
+                <button class="btn btn-secondary" onclick="cal.resetColors()">초기화</button>
+                <button class="btn btn-primary" onclick="cal.closeSettings()">완료</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== Supabase 설정 =====
+        const SUPABASE_URL = 'https://tzjpgqfdudbhygzmbygo.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_j8sTg73xGX0AVgTwW43syQ_L393CW1I';
+        const TABLE_NAME = 'vlvd_promotions';
+        
+        let supabaseClient = null;
+        
+        // 파일 저장소 (메모리)
+        const fileStorage = {};
+        
+        // Supabase 클라이언트 초기화
+        function initSupabaseClient() {
+            // 라이브러리 로드 대기
+            if (!window.supabase) {
+                console.log('⏳ Supabase 라이브러리 로드 중...');
+                setTimeout(initSupabaseClient, 500);
+                return;
+            }
+            
+            const { createClient } = window.supabase;
+            supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+            console.log('✓ Supabase 클라이언트 초기화 완료');
+        }
+        
+        const cal = {
+            data: [{"id": "promo_0_177976967043", "name": "11월 3주차 주말 특가", "start": "2025-11-22", "end": "2025-11-23", "platform": "29cm", "key": "29cm", "desc": "크롭 맨투맨, 후드, 면팬츠, 데님, 조거", "sales": 2264200, "target": 2000000, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_11%EC%9B%94_3%EC%A3%BC%EC%B0%A8_%EC%A3%BC%EB%A7%90%ED%8A%B9%EA%B0%80.xlsx", "feedback": "팬츠 후기 쌓아서 4주차 작성"}, {"id": "promo_1_177976967043", "name": "3월 웰컴 스프링 데일리룩", "start": "2025-03-17", "end": "2025-03-31", "platform": "무신사", "key": "musinsa", "desc": "[기모선택]Hitten 헤비테리 후드 외34 ", "sales": 33350029, "target": 20000000, "file": "(%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4)_WELCOME_SPRING_DAILYLOOK_(%EB%AA%A8%EC%9D%8C%EC%A0%84)_%EC%84%B8%EC%9D%BC%EC%9A%94%EC%B2%AD_%EC%9D%B4%EC%A3%BC%ED%9D%AC.xlsx", "feedback": ""}, {"id": "promo_2_177976967043", "name": "3월 2주차 주말세일", "start": "2025-03-14", "end": "2025-03-16", "platform": "무신사", "key": "musinsa", "desc": "[기모선택]Hitten 헤비테리 후드 외4", "sales": 3596786, "target": 4000000, "file": "20250314_%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EB%AC%B4%EC%8B%A0%EC%82%AC%EC%8A%A4%ED%86%A0%EC%96%B4%EC%A3%BC%EB%A7%90%EC%84%B8%EC%9D%BC_%EC%9D%B4%EC%A3%BC%ED%9D%AC.xlsx", "feedback": ""}, {"id": "promo_3_177976967043", "name": "SUMMER KEYWORD 특별기획전", "start": "2025-04-07", "end": "2025-04-20", "platform": "무신사", "key": "musinsa", "desc": "균일가전 반팔티로 진행", "sales": 0, "target": 0, "file": "(%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4)_%EC%84%9C%EB%A8%B8_%ED%82%A4%EC%9B%8C%EB%93%9C_%EC%95%84%EC%9D%B4%ED%85%9C_%EC%9D%B4%EC%A3%BC%ED%9D%AC.xlsx", "feedback": ""}, {"id": "promo_4_177976967043", "name": "주말세일", "start": "2025-04-04", "end": "2025-04-06", "platform": "무신사", "key": "musinsa", "desc": "여성 반팔, 볼캡", "sales": 0, "target": 0, "file": "20250404_%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EB%AC%B4%EC%8B%A0%EC%82%AC%EC%8A%A4%ED%86%A0%EC%96%B4%EC%A3%BC%EB%A7%90%EC%84%B8%EC%9D%BC_%EC%9D%B4%EC%A3%BC%ED%9D%AC.xlsx", "feedback": ""}, {"id": "promo_5_177976967043", "name": "봄 시즌오프", "start": "2025-04-14", "end": "2025-04-21", "platform": "무신사", "key": "musinsa", "desc": "여성 크롭라인, 조거, 일자\n재고 소진(달성 매출은 스웻류만 기록)", "sales": 0, "target": 0, "file": "(%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4)250414-250421_%E3%80%8E2025_%EB%B4%84_%EC%8B%9C%EC%A6%8C_%EC%98%A4%ED%94%84%E3%80%8F.xlsx", "feedback": ""}, {"id": "promo_6_177976967043", "name": "연휴 타임세일", "start": "2025-05-05", "end": "2025-05-11", "platform": "무신사", "key": "musinsa", "desc": "신상품 팬츠 & 크롭, 오버 best", "sales": 0, "target": 0, "file": "20250505_%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EB%AC%B4%EC%8B%A0%EC%82%AC%EC%8A%A4%ED%86%A0%EC%96%B4_%ED%83%80%EC%9E%84%EC%84%B8%EC%9D%BC.xlsx", "feedback": "미선정 미진행"}, {"id": "promo_7_177976967043", "name": "20대를 위한 TPO별 스타일링 추천 캠페인", "start": "2025-04-28", "end": "2025-05-12", "platform": "무신사", "key": "musinsa", "desc": "볼캡 9품목 반팔 7품목", "sales": 0, "target": 0, "file": "(%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4)_20%EB%8C%80%EB%A5%BC_%EC%9C%84%ED%95%9C_TPO%EB%B3%84_%EC%8A%A4%ED%83%80%EC%9D%BC%EB%A7%81_%EC%B6%94%EC%B2%9C_%EC%84%B8%EC%9D%BC%EC%9A%94%EC%B2%AD_%EC%9D%B4%EC%A3%BC%ED%9D%AC.xlsx", "feedback": ""}, {"id": "promo_8_177976967043", "name": "5/16(12:00)~5/18(23:59)주말특가", "start": "2025-05-16", "end": "2025-05-18", "platform": "무신사", "key": "musinsa", "desc": "MUNICH, BLUETAG, CYLEN, 나일론 팬츠 등 부스팅 가능성 상품", "sales": 0, "target": 0, "file": "(%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4)_%EC%A3%BC%EB%A7%90%ED%8A%B9%EA%B0%80_%EC%A7%80%EB%AF%BC%EA%B2%BD.xlsx", "feedback": ""}, {"id": "promo_9_177976967043", "name": "5월 2주차 5/23~5/25 주말특가", "start": "2025-05-23", "end": "2025-05-25", "platform": "무신사", "key": "musinsa", "desc": "MAGNET,LOS,AMPER,VTG 등 신규 상품 위주", "sales": 0, "target": 0, "file": "20250523_%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EB%AC%B4%EC%8B%A0%EC%82%AC%EC%8A%A4%ED%86%A0%EC%96%B4_%EC%A3%BC%EB%A7%90%EC%84%B8%EC%9D%BC_%EC%9D%B4%EC%A3%BC%ED%9D%AC.xlsx", "feedback": ""}, {"id": "promo_10_17797696704", "name": "무진장 여름 블랙프라이데이 타임세일", "start": "2025-06-15", "end": "2025-06-25", "platform": "무신사", "key": "musinsa", "desc": "RESTCHILL 시그니처 특가, 수수료 15% 진행\n\n", "sales": 0, "target": 0, "file": "", "feedback": "진행중"}, {"id": "promo_11_17797696704", "name": "무신사 여름 블랙프라이데이", "start": "2025-06-15", "end": "2025-06-25", "platform": "무신사", "key": "musinsa", "desc": "여름시즌 상품 매출 증대 및 재고 소진", "sales": 0, "target": 0, "file": "%EB%AC%B4%EC%A7%84%EC%9E%A5_2025_%EC%97%AC%EB%A6%84_%EB%B8%94%EB%9E%99%ED%94%84%EB%9D%BC%EC%9D%B4%EB%8D%B0%EC%9D%B4_-_%EC%9D%BC%EB%B0%98%EC%84%B8%EC%9D%BC___%EC%A0%84%EC%B2%B4_%EC%84%B8%EC%9D%BC%EB%AA%A9%EB%A1%9D%EB%8B%A4%EC%9A%B4%EB%A1%9C%EB%93%9C_(1).csv", "feedback": ""}, {"id": "promo_12_17797696704", "name": "에이블리 브랜드 위크", "start": "2025-07-09", "end": "2025-07-16", "platform": "에이블리", "key": "other", "desc": "전 상품", "sales": 0, "target": 0, "file": "", "feedback": "신청"}, {"id": "promo_13_17797696704", "name": "팬츠위크", "start": "2025-07-04", "end": "2025-07-10", "platform": "자사몰", "key": "own", "desc": "팬츠 전체", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_14_17797696704", "name": "타임세일", "start": "2025-07-07", "end": "2025-07-13", "platform": "무신사", "key": "musinsa", "desc": "반팔 리딩상품들 일 2개", "sales": 0, "target": 0, "file": "(%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4)_7%EC%9B%947%EC%9D%BC%EC%A3%BC%EC%B0%A8_%ED%83%80%EC%9E%84%EC%84%B8%EC%9D%BC_%EB%B0%95%ED%95%9C%EC%9A%B8MD.xlsx", "feedback": ""}, {"id": "promo_15_17797696704", "name": "타임세일2", "start": "2025-07-14", "end": "2025-07-20", "platform": "무신사", "key": "musinsa", "desc": "반팔 리딩상품들 일 4개", "sales": 0, "target": 0, "file": "(%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4)_7%EC%9B%9414%EC%9D%BC%EC%A3%BC%EC%B0%A8_%ED%83%80%EC%9E%84%EC%84%B8%EC%9D%BC_%EB%B0%95%ED%95%9C%EC%9A%B8MD_(1).xlsx", "feedback": ""}, {"id": "promo_16_17797696704", "name": "상반기 결산 세일", "start": "2025-07-21", "end": "2025-07-31", "platform": "무신사", "key": "musinsa", "desc": "반팔 리딩 상품 & 여성 신규 & 볼캡 신규", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_17_17797696704", "name": "타임세일", "start": "2025-08-04", "end": "2025-08-10", "platform": "무신사", "key": "musinsa", "desc": "반팔 리딩 상품 & 여성 신규 & 볼캡 신규", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_18_17797696704", "name": "여성 슬림핏 & 볼캡", "start": "2025-07-18", "end": "2025-07-24", "platform": "자사몰", "key": "own", "desc": "여성 슬림핏 & 볼캡", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_19_17797696704", "name": "여름 라스트찬스 세일", "start": "2025-07-25", "end": "2025-07-31", "platform": "에이블리", "key": "other", "desc": "반팔 리딩 상품 & 여성 신규 & 볼캡 신규", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_20_17797696704", "name": "고객확장 프로그램 ", "start": "2025-08-01", "end": "2025-08-31", "platform": "지그재그", "key": "other", "desc": "스토어 전체 반영", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_21_17797696704", "name": "주말특가", "start": "2025-08-01", "end": "2025-08-03", "platform": "무신사글로벌", "key": "global", "desc": "대표 10개 상품", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_8%EC%9B%94_1%EC%A3%BC%EC%B0%A8_%EC%A3%BC%EB%A7%90%ED%8A%B9%EA%B0%80_%EC%9D%BC%EB%B0%98_%EC%84%B8%EC%9D%BC_%EC%B0%B8%EC%97%AC.xlsx", "feedback": ""}, {"id": "promo_22_17797696704", "name": "퍼스널스페이스 하루특가 (14일)", "start": "2025-08-04", "end": "2025-08-18", "platform": "무신사글로벌", "key": "global", "desc": "97개 상품 14일간, 일7개", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_23_17797696704", "name": "퍼스널스페이스 일반세일", "start": "2025-08-04", "end": "2025-08-18", "platform": "무신사글로벌", "key": "global", "desc": "40개 상품 대상", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%ED%8D%BC%EC%8A%A4%EB%84%90%EC%8A%A4%ED%8E%98%EC%9D%B4%EC%8A%A4_%EC%9D%BC%EB%B0%98_%EC%84%B8%EC%9D%BC_%EC%B0%B8%EC%97%AC.xlsx", "feedback": ""}, {"id": "promo_24_17797696704", "name": "8월 5주차 주말특가", "start": "2025-08-29", "end": "2025-09-01", "platform": "무신사", "key": "musinsa", "desc": "여름 재고 & 신규 후드 노출", "sales": 0, "target": 0, "file": "(%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4)_8%EC%9B%94_5%EC%A3%BC%EC%B0%A8_%EC%A3%BC%EB%A7%90%ED%8A%B9%EA%B0%80_%EB%B0%95%ED%95%9C%EC%9A%B8MD.xlsx", "feedback": ""}, {"id": "promo_25_17797696704", "name": "겨울 무진장 블프", "start": "2025-11-21", "end": "2025-12-07", "platform": "무신사", "key": "musinsa", "desc": "FW전상품", "sales": 0, "target": 0, "file": "2025_fw_%EB%AC%B4%EC%8B%A0%EC%82%AC_%EB%B8%94%ED%94%84.xlsx", "feedback": ""}, {"id": "promo_26_17797696704", "name": "잡화 페스티벌", "start": "2025-08-11", "end": "2025-08-18", "platform": "무신사", "key": "musinsa", "desc": "잡화 10개 대상", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_27_17797696704", "name": "반소매 티셔츠 캠페인", "start": "2025-08-11", "end": "2025-08-18", "platform": "무신사글로벌", "key": "global", "desc": "반팔 68개 대상", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EB%B0%98%EC%86%8C%EB%A7%A4_%ED%8B%B0%EC%85%94%EC%B8%A0_%EC%BA%A0%ED%8E%98%EC%9D%B8_%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EC%9D%BC%EB%B0%98%EC%B0%B8%EC%97%AC.xlsx", "feedback": ""}, {"id": "promo_28_17797696704", "name": "반소매 티셔츠 캠페인 하루특가", "start": "2025-08-11", "end": "2025-08-18", "platform": "무신사글로벌", "key": "global", "desc": "반팔 68개 대상", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EB%B0%98%EC%86%8C%EB%A7%A4_%ED%8B%B0%EC%85%94%EC%B8%A0_%EC%BA%A0%ED%8E%98%EC%9D%B8_%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%ED%95%98%EB%A3%A8%ED%8A%B9%EA%B0%80.xlsx", "feedback": ""}, {"id": "promo_29_17797696704", "name": "8월2주차 주말특가", "start": "2025-08-08", "end": "2025-08-11", "platform": "무신사", "key": "musinsa", "desc": "유니섹스 반팔 타임세일 외 10개", "sales": 0, "target": 0, "file": "(%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4)_8%EC%9B%942%EC%A3%BC%EC%B0%A8_%EC%A3%BC%EB%A7%90%ED%8A%B9%EA%B0%80_%EB%B0%95%ED%95%9C%EC%9A%B8MD.xlsx", "feedback": ""}, {"id": "promo_30_17797696704", "name": "타임세일", "start": "2025-08-18", "end": "2025-08-24", "platform": "무신사", "key": "musinsa", "desc": "20개 품목", "sales": 0, "target": 0, "file": "(%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4)_8%EC%9B%9418%EC%9D%BC%EC%A3%BC%EC%B0%A8_%ED%83%80%EC%9E%84%EC%84%B8%EC%9D%BC_%EB%B0%95%ED%95%9C%EC%9A%B8MD.xlsx", "feedback": ""}, {"id": "promo_31_17797696704", "name": "연휴 특별 세일", "start": "2025-08-14", "end": "2025-08-17", "platform": "무신사", "key": "musinsa", "desc": "Restchill 단독", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_32_17797696704", "name": "추석 빅세일", "start": "2025-09-22", "end": "2025-10-16", "platform": "무신사", "key": "musinsa", "desc": "FW 전상품", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_33_17797696704", "name": "타임세일", "start": "2025-09-08", "end": "2025-09-14", "platform": "무신사", "key": "musinsa", "desc": "신상품& 2024 캐리오버", "sales": 0, "target": 0, "file": "(%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4)_9%EC%9B%948%EC%9D%BC%EC%A3%BC%EC%B0%A8_%ED%83%80%EC%9E%84%EC%84%B8%EC%9D%BC_%EB%B0%95%ED%95%9C%EC%9A%B8MD.xlsx", "feedback": ""}, {"id": "promo_34_17797696704", "name": "타임세일", "start": "2025-09-15", "end": "2025-09-21", "platform": "무신사", "key": "musinsa", "desc": "신상품", "sales": 0, "target": 0, "file": "(%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4)_9%EC%9B%94_15%EC%9D%BC%EC%A3%BC%EC%B0%A8_%ED%83%80%EC%9E%84%EC%84%B8%EC%9D%BC_%EB%B0%95%ED%95%9C%EC%9A%B8MD.xlsx", "feedback": ""}, {"id": "promo_35_17797696704", "name": "9월 1주차 주말특가", "start": "2025-09-05", "end": "2025-09-08", "platform": "무신사", "key": "musinsa", "desc": "신규 후드 노출", "sales": 0, "target": 0, "file": "(%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4)_9%EC%9B%941%EC%A3%BC%EC%B0%A8_%EC%A3%BC%EB%A7%90%ED%8A%B9%EA%B0%80_%EB%B0%95%ED%95%9C%EC%9A%B8MD.xlsx", "feedback": ""}, {"id": "promo_36_17797696704", "name": "타임세일", "start": "2025-09-22", "end": "2025-10-16", "platform": "무신사", "key": "musinsa", "desc": "", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_37_17797696704", "name": "10월 3주차 주말특가", "start": "2025-10-16", "end": "2025-10-20", "platform": "무신사", "key": "musinsa", "desc": "MY youth 후드,맨투맨, Gleam, 044 else, accent, aster, s2 dot, Two stamp, ilove, Fortune", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_38_17797696704", "name": "10월 4주차 주말특가", "start": "2025-10-24", "end": "2025-10-27", "platform": "무신사", "key": "musinsa", "desc": "stamp, prompt,storm,saddie, 엘리조거, saddie ownly aethetic, bold맨ㅌ맨, brownchill, hitten", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_39_17797696704", "name": "이구위크", "start": "2025-11-03", "end": "2025-11-13", "platform": "29cm", "key": "29cm", "desc": "FW 전상품", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EC%9D%B4%EA%B5%AC%EC%9C%84%ED%81%AC_29CM_%EC%9D%BC%EA%B4%84%ED%95%A0%EC%9D%B8.xlsx", "feedback": ""}, {"id": "promo_40_17797696704", "name": "브랜드위크", "start": "2025-10-24", "end": "2025-10-31", "platform": "에이블리", "key": "other", "desc": "전제품 쿠폰 10%, 20%\n수수료 각 8%, 5% 인하", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_41_17797696704", "name": "멥버스데이 (빅배너)", "start": "2025-11-01", "end": "2025-11-04", "platform": "무신사", "key": "musinsa", "desc": "My Youth + 전상품", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_42_17797696704", "name": "3월 1주차 72시간 특가 (1)", "start": "2025-03-04", "end": "2025-03-06", "platform": "무신사", "key": "musinsa", "desc": "Element 우먼 세미 크롭 후드\n", "sales": 400000, "target": 3000000, "file": "20250304_%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EB%AC%B4%EC%8B%A0%EC%82%AC%EC%8A%A4%ED%86%A0%EC%96%B4_72%EC%8B%9C%EA%B0%84_%EC%9D%B4%EC%A3%BC%ED%9D%AC.xlsx", "feedback": "여성 크롭 위주 부진 상품 진행했으나 목표매출에 미치지 못했음."}, {"id": "promo_43_17797696704", "name": "11월 27일 주차 하루특가(구 타임세일)", "start": "2025-11-27", "end": "2025-11-30", "platform": "무신사", "key": "musinsa", "desc": "대표 리딩 상품 & 신상품 위주", "sales": 0, "target": 0, "file": "(%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4)_11%EC%9B%94_27%EC%9D%BC%EC%A3%BC%EC%B0%A8_%ED%95%98%EB%A3%A8%ED%8A%B9%EA%B0%80_%EB%B0%95%ED%95%9C%EC%9A%B8MD.xlsx", "feedback": ""}, {"id": "promo_44_17797696704", "name": "12월 1일주차 하루특가(구 타임세일)", "start": "2025-12-01", "end": "2025-12-07", "platform": "무신사", "key": "musinsa", "desc": "대표 리딩 상품 & 신상품 위주", "sales": 0, "target": 0, "file": "(%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4)_12%EC%9B%941%EC%9D%BC%EC%A3%BC%EC%B0%A8_%ED%95%98%EB%A3%A8%ED%8A%B9%EA%B0%80_%EB%B0%95%ED%95%9C%EC%9A%B8MD.xlsx", "feedback": ""}, {"id": "promo_45_17797696704", "name": "시즌오프 기간 한정특가", "start": "2025-12-08", "end": "2025-12-11", "platform": "무신사글로벌", "key": "global", "desc": "재고 소진 목적 피그먼트후드, 크롭 맨투맨, 데님, 면 팬츠 등", "sales": 0, "target": 0, "file": "25FW_%EC%8B%9C%EC%A6%8C%EC%98%A4%ED%94%84_%EC%B7%A8%ED%95%A9%ED%86%B5%ED%95%A9%EB%B3%B8(1124)_%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4.xlsx", "feedback": ""}, {"id": "promo_46_17797696704", "name": "11월 4주차 주말 특가", "start": "2025-11-28", "end": "2025-12-01", "platform": "무신사", "key": "musinsa", "desc": "신규상품 부스팅", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_47_17797696704", "name": "시즌오프 일반 세일", "start": "2025-12-08", "end": "2025-12-22", "platform": "무신사글로벌", "key": "global", "desc": "재고 소진 목적 피그먼트후드, 크롭 맨투맨, 데님, 면 팬츠 등", "sales": 0, "target": 0, "file": "25FW_%EC%8B%9C%EC%A6%8C%EC%98%A4%ED%94%84_%EC%B7%A8%ED%95%A9%ED%86%B5%ED%95%A9%EB%B3%B8(1124)_%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4%201.xlsx", "feedback": ""}, {"id": "promo_48_17797696704", "name": "방한 아이템 기획전_큐레이션 구좌", "start": "2025-12-18", "end": "2025-12-27", "platform": "29cm", "key": "29cm", "desc": "재고 소진 목적 피그먼트후드, 크롭 맨투맨, 데님, 면 팬츠 등", "sales": 0, "target": 0, "file": "12%EC%9B%94_%EB%B0%A9%ED%95%9C_%EC%95%84%EC%9D%B4%ED%85%9C_%EA%B8%B0%ED%9A%8D%EC%A0%84_%EC%83%81%EC%8B%9C_%ED%95%A0%EC%9D%B8.xlsx", "feedback": ""}, {"id": "promo_49_17797696704", "name": "12월 1주차 주말 특가", "start": "2025-12-06", "end": "2025-12-07", "platform": "29cm", "key": "29cm", "desc": "재고 소진 목적 피그먼트후드, 크롭 맨투맨, 데님, 면 팬츠 등", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_50_17797696704", "name": "12월 2주차 주말특가", "start": "2025-12-12", "end": "2025-12-15", "platform": "무신사", "key": "musinsa", "desc": "신제품 노출, 머플러 후드집업", "sales": 0, "target": 0, "file": "(%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4)12%EC%9B%942%EC%A3%BC%EC%B0%A8_%EC%A3%BC%EB%A7%90%ED%8A%B9%EA%B0%80_%EB%B0%95%ED%95%9C%EC%9A%B8MD.xlsx", "feedback": ""}, {"id": "promo_51_17797696704", "name": "연말 결산 빅세일", "start": "2025-12-01", "end": "2025-12-11", "platform": "무신사", "key": "musinsa", "desc": "대표 리딩 상품 & 소진 재고", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_52_17797696704", "name": "8일 주차 하루특가", "start": "2025-12-08", "end": "2025-12-14", "platform": "무신사", "key": "musinsa", "desc": "8, 11,12,14 진행\n신규 상품, 재고소진 상품", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_53_17797696704", "name": "15일 주차 하루특가", "start": "2025-12-15", "end": "2025-12-21", "platform": "무신사", "key": "musinsa", "desc": "15,16,17,18,20,21,", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_54_17797696704", "name": "유니섹스 인기 브랜드 라스트 세일", "start": "2025-12-15", "end": "2025-12-21", "platform": "무신사", "key": "musinsa", "desc": "매출, 재고소진", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4%EC%9C%A0%EB%8B%88%EC%84%B9%EC%8A%A4%EC%9D%B8%EA%B8%B0%EB%B8%8C%EB%9E%9C%EB%93%9C_%EB%9D%BC%EC%8A%A4%EC%84%B8%EC%9D%BC_%EC%84%B8%EC%9D%BC%EC%BF%A0%ED%8F%B0_%EB%B0%95%ED%95%9C%EC%9A%B8MD.xlsx", "feedback": ""}, {"id": "promo_55_17797696704", "name": "우먼즈 아듀", "start": "2025-12-22", "end": "2026-01-01", "platform": "무신사", "key": "musinsa", "desc": "우먼스, 크롭  제품 재고소진 30~40%", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_56_17797696704", "name": "X 투썸 스초생, 화초생, 말차아박", "start": "2025-12-16", "end": "2025-12-29", "platform": "무신사", "key": "musinsa", "desc": "", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_57_17797696704", "name": "글로벌 뉴이어&이달의세일", "start": "2025-12-26", "end": "2026-01-05", "platform": "무신사글로벌", "key": "global", "desc": "", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_58_17797696704", "name": "12월 2주차 주말특가", "start": "2025-12-13", "end": "2025-12-14", "platform": "29cm", "key": "29cm", "desc": "신제품 노출, 머플러 후드집업,재고 소진", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_12%EC%9B%94_2%EC%A3%BC%EC%B0%A8_%EC%A3%BC%EB%A7%90%ED%8A%B9%EA%B0%80.xlsx", "feedback": ""}, {"id": "promo_59_17797696704", "name": "12월 3주차 주말 특가", "start": "2025-12-20", "end": "2025-12-21", "platform": "29cm", "key": "29cm", "desc": "신제품 노출", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_12%EC%9B%94_3%EC%A3%BC%EC%B0%A8_%EC%A3%BC%EB%A7%90%ED%8A%B9%EA%B0%80.xlsx", "feedback": ""}, {"id": "promo_60_17797696704", "name": "12월 4주차 주말특가&이구데이", "start": "2025-12-29", "end": "2025-12-29", "platform": "29cm", "key": "29cm", "desc": "매출, 재고 소진", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_12%EC%9B%94_4%EC%A3%BC%EC%B0%A8_%EC%A3%BC%EB%A7%90%ED%8A%B9%EA%B0%80%EC%9D%B4%EA%B5%AC%EB%8D%B0%EC%9D%B4.xlsx", "feedback": ""}, {"id": "promo_61_17797696704", "name": "브랜드 리스트 기획전", "start": "2025-12-22", "end": "2025-12-28", "platform": "29cm", "key": "29cm", "desc": "브랜드 , 베스트 아이템 노출", "sales": 0, "target": 0, "file": "03_%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EB%A7%88%EC%9D%B4%EB%B8%8C%EB%9E%9C%EB%93%9C_%EB%A6%AC%EC%8A%A4%ED%8A%B8_%EC%9D%B4%EB%B2%A4%ED%8A%B8.xlsx", "feedback": ""}, {"id": "promo_62_17797696704", "name": "25FW 시즌 오프 기획전", "start": "2026-01-05", "end": "2026-01-14", "platform": "29cm", "key": "29cm", "desc": "재고 소진", "sales": 16371848, "target": 0, "file": "", "feedback": ""}, {"id": "promo_63_17797696704", "name": "하루특가", "start": "2026-01-05", "end": "2026-01-11", "platform": "무신사", "key": "musinsa", "desc": "매출, 재고 소진", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_64_17797696704", "name": "fw 클리어런스 세일 (my youth 아이코닉 특가)", "start": "2026-01-19", "end": "2026-01-29", "platform": "무신사", "key": "musinsa", "desc": "매출, 재고 소진", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_65_17797696704", "name": "1월 2주차 주말특가", "start": "2026-01-09", "end": "2026-01-12", "platform": "무신사", "key": "musinsa", "desc": "신규상품 노출 ", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_66_17797696704", "name": "글로벌 클리어런스 세일", "start": "2026-01-19", "end": "2026-01-29", "platform": "무신사글로벌", "key": "global", "desc": "매출, 재고 소진", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_67_17797696704", "name": "새해맞이 기획전", "start": "2026-01-15", "end": "2026-01-28", "platform": "29cm", "key": "29cm", "desc": "매출, 재고 소진", "sales": 0, "target": 10000000, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EC%83%88%ED%95%B4%EB%A7%9E%EC%9D%B4_%EB%B8%8C%EB%9E%9C%EB%93%9C_%EB%A6%B4%EB%A0%88%EC%9D%B4.xlsx, %EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EC%83%88%ED%95%B4%EB%A7%9E%EC%9D%B4_%EC%9D%BC%EB%B0%98%ED%95%A0%EC%9D%B8.xlsx", "feedback": ""}, {"id": "promo_68_17797696704", "name": "무신사 주말 특별 쿠폰", "start": "2026-01-15", "end": "2026-01-18", "platform": "무신사", "key": "musinsa", "desc": "전제품", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_69_17797696704", "name": "연휴준비 기획전", "start": "2026-02-02", "end": "2026-02-11", "platform": "29cm", "key": "29cm", "desc": "재고 소진", "sales": 0, "target": 5000000, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EC%97%B0%ED%9C%B4%EC%A4%80%EB%B9%84_%EA%B8%B0%ED%9A%8D%EC%A0%84_%EB%B8%8C%EB%9E%9C%EB%93%9C%EC%9C%84%ED%81%AC.xlsx, %EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EC%97%B0%ED%9C%B4%EC%A4%80%EB%B9%84_%EA%B8%B0%ED%9A%8D%EC%A0%84_%EC%9D%BC%EB%B0%98%ED%95%A0%EC%9D%B8.xlsx", "feedback": ""}, {"id": "promo_70_17797696704", "name": "설연휴 거래액 대응 기획전", "start": "2026-02-12", "end": "2026-02-18", "platform": "29cm", "key": "29cm", "desc": "재고 소진, SS 제품 노출", "sales": 0, "target": 15000000, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EC%84%A4%EC%97%B0%ED%9C%B4_%EA%B8%B0%ED%9A%8D%EC%A0%84_%EB%B8%8C%EB%9E%9C%EB%93%9C%EB%8D%B0%EC%9D%B4.xlsx, %EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EC%84%A4%EC%97%B0%ED%9C%B4_%EA%B8%B0%ED%9A%8D%EC%A0%84_%EB%9D%BC%EC%8A%A4%ED%8A%B8_%ED%81%B4%EB%A6%AC%EC%96%B4%EB%9F%B0%EC%8A%A4.xlsx, %EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EC%84%A4%EC%97%B0%ED%9C%B4_%EA%B8%B0%ED%9A%8D%EC%A0%84_%EC%9D%BC%EB%B0%98%ED%95%A0%EC%9D%B8.xlsx", "feedback": ""}, {"id": "promo_71_17797696704", "name": "설날 빅세일", "start": "2026-02-09", "end": "2026-02-18", "platform": "무신사", "key": "musinsa", "desc": "매출, 재고소진", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_72_17797696704", "name": "무신사 멤버스데이", "start": "2026-02-01", "end": "2026-02-04", "platform": "무신사", "key": "musinsa", "desc": "매출, 재고 소진", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_73_17797696704", "name": "주말특가", "start": "2026-02-06", "end": "2026-02-09", "platform": "무신사", "key": "musinsa", "desc": "매출, 재고소진", "sales": 0, "target": 0, "file": "(%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4)_2%EC%9B%941%EC%A3%BC%EC%B0%A8_%EC%A3%BC%EB%A7%90%ED%8A%B9%EA%B0%80_%EB%B0%95%ED%95%9C%EC%9A%B8MD.xlsx", "feedback": ""}, {"id": "promo_74_17797696704", "name": "프리스프링 기획전", "start": "2026-02-19", "end": "2026-02-28", "platform": "29cm", "key": "29cm", "desc": "신상품 노출, 재소 소진", "sales": 0, "target": 5000000, "file": "2%EC%9B%94_%ED%94%84%EB%A6%AC%EC%8A%A4%ED%94%84%EB%A7%81_%EA%B8%B0%ED%9A%8D%EC%A0%84_%ED%8C%90%EB%A7%A4%EA%B0%80_%ED%85%9C%ED%94%8C%EB%A6%BF.xlsx", "feedback": ""}, {"id": "promo_75_17797696704", "name": "설날 에프터 세일", "start": "2026-02-19", "end": "2026-02-25", "platform": "무신사", "key": "musinsa", "desc": "매출, 재고소진", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_76_17797696704", "name": "3월 패션위크 ", "start": "2026-03-04", "end": "2026-03-14", "platform": "무신사", "key": "musinsa", "desc": "전제품 대상 기존 할인율 +5% 쿠폰", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_77_17797696704", "name": "3월 이구위크", "start": "2026-03-16", "end": "2026-03-25", "platform": "29cm", "key": "29cm", "desc": "신상 노출", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EC%9D%B4%EA%B5%AC%ED%8C%A8%EC%85%98%EC%9C%84%ED%81%AC_%EC%8B%A0%EC%83%81%ED%95%A0%EC%9D%B8%EB%B8%8C%EB%9E%9C%EB%93%9C%EA%B4%80.xlsx, %EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EC%9D%B4%EA%B5%AC%ED%8C%A8%EC%85%98%EC%9C%84%ED%81%AC_%EC%9D%BC%EB%B0%98%ED%95%A0%EC%9D%B8.xlsx, %EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EC%9D%B4%EA%B5%AC%ED%8C%A8%EC%85%98%EC%9C%84%ED%81%AC_%ED%83%80%EC%9E%84%EB%94%9C.xlsx", "feedback": ""}, {"id": "promo_78_17797696704", "name": "설연휴 프로모션 ( 회원 쿠폰 ) ", "start": "2026-02-13", "end": "2026-02-18", "platform": "자사몰", "key": "own", "desc": "", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_79_17797696704", "name": "3월 멤버스 데이", "start": "2026-03-01", "end": "2026-03-04", "platform": "무신사", "key": "musinsa", "desc": "", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_80_17797696704", "name": "신학기 브랜드 위크", "start": "2026-03-19", "end": "2026-03-22", "platform": "무신사", "key": "musinsa", "desc": "", "sales": 0, "target": 0, "file": "%EC%8B%A0%ED%95%99%EA%B8%B0_%EB%B8%8C%EB%9E%9C%EB%93%9C%EC%9C%84%ED%81%AC.xlsx", "feedback": ""}, {"id": "promo_81_17797696704", "name": "26ss신상", "start": "2026-03-16", "end": "2026-03-25", "platform": "무신사", "key": "musinsa", "desc": "", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_82_17797696704", "name": "유니섹스 20% 특별쿠폰", "start": "2026-03-23", "end": "2026-03-30", "platform": "무신사", "key": "musinsa", "desc": "무신사 5: 브랜드 15 20% 특별쿠폰", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_83_17797696704", "name": "멤버스데이", "start": "2026-04-01", "end": "2026-04-04", "platform": "무신사", "key": "musinsa", "desc": "전체 10% 쿠폰", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_84_17797696704", "name": "4월 1주차 주말 특가", "start": "2026-04-04", "end": "2026-04-05", "platform": "29cm", "key": "29cm", "desc": "전체 상시할인가 + 3% 할인", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_4%EC%9B%94_1%EC%A3%BC%EC%B0%A8_%EC%A3%BC%EB%A7%90%ED%8A%B9%EA%B0%80.xlsx", "feedback": ""}, {"id": "promo_85_17797696704", "name": "스프링웨딩 기획전 / 상품 기획전 (아우터, 프린팅 여름 제품)", "start": "2026-04-01", "end": "2026-04-07", "platform": "29cm", "key": "29cm", "desc": "베이스 아이템, 아우터, 프린팅 제품 노출\n전체 상시할인가 + 3% 할인", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_4%EC%9B%94_%EC%8A%A4%ED%94%84%EB%A7%81%EC%9B%A8%EB%94%A9_%EA%B8%B0%ED%9A%8D%EC%A0%84.xlsx, %EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EB%8D%B0%EC%9D%BC%EB%A6%AC%EC%95%84%EC%9B%83%EC%9B%A8%EC%96%B4_17%EB%B6%84%EB%8B%B4%EC%BF%A0%ED%8F%B0.xlsx, %EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EB%B2%A0%EC%8A%A4%ED%8A%B8%ED%8B%B0%EC%85%94%EC%B8%A0_17%EB%B6%84%EB%8B%B4%EC%BF%A0%ED%8F%B0.xlsx", "feedback": ""}, {"id": "promo_86_17797696704", "name": "29익스클루시브", "start": "2026-03-30", "end": "2026-04-08", "platform": "29cm", "key": "29cm", "desc": "반팔 초기 부스팅, 가을 제품 재고 소진", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_29%EC%9D%B5%EC%8A%A4%ED%81%B4%EB%A3%A8%EC%8B%9C%EB%B8%8C_%EC%9D%BC%EB%B0%98%ED%95%A0%EC%9D%B8.xlsx, %EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_29%EC%9D%B5%EC%8A%A4%ED%81%B4%EB%A3%A8%EC%8B%9C%EB%B8%8C_29%EB%B8%8C%EB%9E%9C%EB%93%9C_%ED%98%9C%ED%83%9D%EA%B4%80.xlsx, 29%EC%9D%B5%EC%8A%A4%ED%81%B4%EB%A3%A8%EC%8B%9C%EB%B8%8C_%EB%A7%88%EC%A7%84_%EA%B3%84%EC%82%B0.xlsx", "feedback": ""}, {"id": "promo_87_17797696704", "name": "무드 리프레시", "start": "2026-04-15", "end": "2026-04-24", "platform": "29cm", "key": "29cm", "desc": "신상 노출, 부스팅\n봄 제품 재고 소진", "sales": 0, "target": 0, "file": "%EB%AC%B4%EB%93%9C%EB%A6%AC%ED%94%84%EB%A0%88%EC%8B%9C_%EB%A7%88%EC%A7%84_%EA%B3%84%EC%82%B0.xlsx, %EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EB%AC%B4%EB%93%9C%EB%A6%AC%ED%94%84%EB%A0%88%EC%8B%9C_%EB%B8%8C%EB%9E%9C%EB%93%9C_%EB%A6%B4%EB%A0%88%EC%9D%B4_%EC%84%B8%EC%9D%BC.xlsx, %EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EB%AC%B4%EB%93%9C%EB%A6%AC%ED%94%84%EB%A0%88%EC%8B%9C_%EC%9D%BC%EB%B0%98%ED%95%A0%EC%9D%B8.xlsx, %EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EB%AC%B4%EB%93%9C%EB%A6%AC%ED%94%84%EB%A0%88%EC%8B%9C_%ED%95%98%EB%A3%A8_%ED%8A%B9%EA%B0%80.xlsx", "feedback": ""}, {"id": "promo_88_17797696704", "name": "우먼즈 위크", "start": "2026-04-08", "end": "2026-04-20", "platform": "자사몰", "key": "own", "desc": "여성 전용 제품 40% 할인", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_89_17797696704", "name": "무신사 여름 블랙프라이데이", "start": "2026-06-12", "end": "2026-06-24", "platform": "무신사", "key": "musinsa", "desc": "", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_90_17797696704", "name": "상품 기획전", "start": "2026-04-08", "end": "2026-04-14", "platform": "29cm", "key": "29cm", "desc": "상품 할인+17% 쿠폰(6:4)", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EB%8D%B0%EC%9D%BC%EB%A6%AC%EC%95%84%EC%9B%83%EC%9B%A8%EC%96%B4_17%EB%B6%84%EB%8B%B4%EC%BF%A0%ED%8F%B0%201.xlsx, %EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EB%B2%A0%EC%8A%A4%ED%8A%B8%ED%8B%B0%EC%85%94%EC%B8%A0_17%EB%B6%84%EB%8B%B4%EC%BF%A0%ED%8F%B0%201.xlsx", "feedback": ""}, {"id": "promo_91_17797696704", "name": "공용 반팔 위크", "start": "2026-04-28", "end": "2026-05-11", "platform": "자사몰", "key": "own", "desc": "공용 반팔 제품 40%할인", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_92_17797696704", "name": "유니섹스 20% 추가 할인 ", "start": "2026-04-05", "end": "2026-04-16", "platform": "무신사", "key": "musinsa", "desc": "전품목 20%\n무신사 5%, 브랜드 15%", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_93_17797696704", "name": "BEST 장바구니 쿠폰", "start": "2026-04-24", "end": "2026-04-26", "platform": "29cm", "key": "29cm", "desc": "신상 노출, \n봄 제품 재고 소진", "sales": 0, "target": 0, "file": "4%EC%9B%94_4%EC%A3%BC%EC%B0%A8_%EC%9E%A5%EB%B0%94%EA%B5%AC%EB%8B%88_%ED%8A%B9%EA%B0%80.xlsx", "feedback": ""}, {"id": "promo_94_17797696704", "name": "이구 데이 연장 특가", "start": "2026-04-30", "end": "2026-05-03", "platform": "29cm", "key": "29cm", "desc": "하의, 반팔 부스팅", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_4%EC%9B%94_%EC%9D%B4%EA%B5%AC%EB%8D%B0%EC%9D%B4_%EC%97%B0%EC%9E%A5_%ED%8A%B9%EA%B0%80.xlsx", "feedback": ""}, {"id": "promo_95_17797696704", "name": "5월 연휴 특가", "start": "2026-05-04", "end": "2026-05-06", "platform": "29cm", "key": "29cm", "desc": "하의, 반팔 부스팅", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_5%EC%9B%94_%EC%97%B0%ED%9C%B4_%ED%8A%B9%EA%B0%80.xlsx", "feedback": ""}, {"id": "promo_96_17797696704", "name": "서머카운트다운 기획전", "start": "2026-05-10", "end": "2026-05-20", "platform": "29cm", "key": "29cm", "desc": "반팔, 롱슬리브", "sales": 0, "target": 0, "file": "", "feedback": ""}, {"id": "promo_97_17797696704", "name": "5월 2주차 주말 특가", "start": "2026-05-09", "end": "2026-05-10", "platform": "29cm", "key": "29cm", "desc": "하의 신상 노출, 반팔 부스팅", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_5%EC%9B%94_2%EC%A3%BC_%EC%A3%BC%EB%A7%90%ED%8A%B9%EA%B0%80.xlsx", "feedback": ""}, {"id": "promo_98_17797696704", "name": "6월 이구위크 기획전", "start": "2026-06-01", "end": "2026-06-11", "platform": "29cm", "key": "29cm", "desc": "카테고리 회차별 노출 20~24%", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EC%9D%B4%EA%B5%AC%EC%9C%84%ED%81%AC_%EC%95%99%EC%BD%94%EB%A5%B4%EC%9E%85%EC%A0%90%ED%9A%8C.xlsx, %EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EC%9D%B4%EA%B5%AC%EC%9C%84%ED%81%AC_%EC%9D%B4%EA%B5%AC%EB%94%9C.xlsx, %EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_%EC%9D%B4%EA%B5%AC%EC%9C%84%ED%81%AC_%EC%9D%BC%EB%B0%98_%ED%95%A0%EC%9D%B8.xlsx", "feedback": ""}, {"id": "promo_99_17797696704", "name": "5월 2주차 장바구니 쿠폰", "start": "2026-05-15", "end": "2026-05-17", "platform": "29cm", "key": "29cm", "desc": "25% (6:4)쿠폰", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_5%EC%9B%94_2%EC%A3%BC%EC%B0%A8_%EC%9E%A5%EB%B0%94%EA%B5%AC%EB%8B%88_%ED%8A%B9%EA%B0%80.xlsx", "feedback": ""}, {"id": "promo_100_1779769670", "name": "5월 4주차 주말 특가", "start": "2026-05-22", "end": "2026-05-24", "platform": "29cm", "key": "29cm", "desc": "20%(6:4)쿠폰", "sales": 0, "target": 0, "file": "%EB%B9%84%EB%B0%94%EB%9D%BC%EB%B9%84%EB%8B%A4_5%EC%9B%94_4%EC%A3%BC%EC%B0%A8_%EC%A3%BC%EB%A7%90%ED%8A%B9%EA%B0%80.xlsx", "feedback": ""}],
+            month: null,
+            year: null,
+            view: 'standard',
+            filter: 'all',
+            editId: null,
+            selectDate: null,
+            selectedFile: null,
+            analyzedData: null,
+            todayStr: '',
+            
+            colors: {
+                '29cm': '#1976d2',
+                'musinsa': '#388e3c',
+                'own': '#f57c00',
+                'global': '#7b1fa2'
+            },
+            
+            init() {
+                // Supabase 클라이언트 초기화
+                initSupabaseClient();
+                
+                // 현재 날짜로 초기화
+                const today = new Date();
+                this.month = today.getMonth() + 1;
+                this.year = today.getFullYear();
+                this.todayStr = this.year + '-' + String(this.month).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+                
+                this.initColors();
+                
+                // Local Storage에서 먼저 로드 (즉시 표시 - Supabase 로드 전 임시)
+                this.loadFromLocalStorage();
+                
+                // Supabase를 기준 데이터로 로드 (로드되면 기존 데이터를 대체)
+                this.loadDataFromSupabase();
+                
+                this.render();
+            },
+            
+            // Supabase에서 데이터 로드
+            async loadDataFromSupabase() {
+                if (!supabaseClient) {
+                    console.log('⏳ Supabase 클라이언트 대기 중...');
+                    await new Promise(r => setTimeout(r, 1000));
+                    return this.loadDataFromSupabase();
+                }
+                
+                try {
+                    console.log('📥 Supabase에서 데이터 로드 시작...');
+                    const { data, error } = await supabaseClient
+                        .from(TABLE_NAME)
+                        .select('*');
+                    
+                    if (error) {
+                        console.error('❌ Supabase 로드 오류:', error);
+                        console.error('오류 상세:', error.message || error);
+                        console.error('오류 코드:', error.code);
+                        return;
+                    }
+                    
+                    if (data && data.length > 0) {
+                        const convertedData = data.map(item => ({
+                            id: 'sb_' + item.id,
+                            name: item.name,
+                            start: item.start_date,
+                            end: item.end_date,
+                            platform: item.platform,
+                            key: item.platform_key,
+                            desc: item.description || '',
+                            sales: item.sales || 0,
+                            target: item.target || 0,
+                            file: item.file_name || '',
+                            feedback: item.feedback || ''
+                        }));
+                        
+                        // Supabase를 단일 기준으로 삼아 기존(코드내장/로컬) 데이터를 교체
+                        this.data = convertedData;
+                        this.render();
+                        console.log('✓ Supabase에서 ' + convertedData.length + '개 프로모션 로드됨 (기준 데이터로 교체)');
+                    } else {
+                        console.log('ℹ️ Supabase에 데이터가 없습니다');
+                    }
+                } catch (err) {
+                    console.error('❌ Supabase 로드 예외:', err);
+                    console.error('예외 스택:', err.stack);
+                }
+            },
+            
+            // Supabase에 데이터 저장
+            async saveToSupabase(promoData) {
+                if (!supabaseClient) {
+                    console.log('⏳ Supabase 클라이언트 대기 중...');
+                    // 클라이언트가 준비될 때까지 대기 후 재시도
+                    await new Promise(r => setTimeout(r, 1000));
+                    return this.saveToSupabase(promoData);
+                }
+                
+                try {
+                    const { data, error } = await supabaseClient
+                        .from(TABLE_NAME)
+                        .insert([{
+                            name: promoData.name,
+                            start_date: promoData.start,
+                            end_date: promoData.end,
+                            platform: promoData.platform,
+                            platform_key: promoData.key,
+                            description: promoData.desc || '',
+                            sales: promoData.sales || 0,
+                            target: promoData.target || 0,
+                            file_name: promoData.file || '',
+                            feedback: promoData.feedback || ''
+                        }]);
+                    
+                    if (error) {
+                        console.error('❌ Supabase 저장 오류:', error);
+                        console.error('오류 상세:', error.message || error);
+                        return false;
+                    }
+                    
+                    console.log('✓ Supabase에 저장됨:', promoData.name);
+                    return true;
+                } catch (err) {
+                    console.error('Supabase 저장 예외:', err);
+                    return false;
+                }
+            },
+            
+            // Local Storage의 모든 데이터를 Supabase로 마이그레이션
+            // [비활성화] 중복 INSERT 원인이라 자동 마이그레이션을 끔. 데이터는 이미 Supabase가 기준.
+            async migrateLocalToSupabase() {
+                console.log('ℹ️ 자동 마이그레이션은 비활성화되어 있습니다 (중복 방지).');
+                return;
+                // eslint-disable-next-line no-unreachable
+                // Local Storage에서 Supabase에 없는 데이터만 마이그레이션
+                const localPromos = this.data.filter(p => !p.id.startsWith('sb_'));
+                
+                if (localPromos.length === 0) {
+                    console.log('✓ 마이그레이션할 데이터 없음');
+                    return;
+                }
+                
+                console.log(`📤 ${localPromos.length}개 프로모션 Supabase로 마이그레이션 시작...`);
+                
+                try {
+                    // 배치 INSERT (한 번에 여러 개 저장)
+                    const insertData = localPromos.map(p => ({
+                        name: p.name,
+                        start_date: p.start,
+                        end_date: p.end,
+                        platform: p.platform,
+                        platform_key: p.key,
+                        description: p.desc || '',
+                        sales: p.sales || 0,
+                        target: p.target || 0,
+                        file_name: p.file || '',
+                        feedback: p.feedback || ''
+                    }));
+                    
+                    const { data, error } = await supabaseClient
+                        .from(TABLE_NAME)
+                        .insert(insertData);
+                    
+                    if (error) {
+                        console.error('❌ 마이그레이션 실패:', error);
+                        console.error('오류 상세:', error.message || error);
+                        return;
+                    }
+                    
+                    console.log(`✅ ${insertData.length}개 프로모션 마이그레이션 완료!`);
+                } catch (err) {
+                    console.error('마이그레이션 예외:', err);
+                }
+            },
+            
+            initColors() {
+                const saved = localStorage.getItem('promoColors');
+                if (saved) {
+                    this.colors = JSON.parse(saved);
+                }
+                this.applyColors();
+            },
+            
+            applyColors() {
+                document.documentElement.style.setProperty('--color-29cm', this.colors['29cm']);
+                document.documentElement.style.setProperty('--color-musinsa', this.colors['musinsa']);
+                document.documentElement.style.setProperty('--color-own', this.colors['own']);
+                document.documentElement.style.setProperty('--color-global', this.colors['global']);
+            },
+            
+            openFileUpload() {
+                this.analyzedData = null;
+                document.getElementById('fileStatus').textContent = '';
+                document.getElementById('analysisResult').innerHTML = '';
+                document.getElementById('registerBtn').style.display = 'none';
+                document.getElementById('analyzeFile').value = '';
+                document.getElementById('uploadModal').classList.add('show');
+            },
+            
+            closeFileUpload() {
+                document.getElementById('uploadModal').classList.remove('show');
+                document.getElementById('analyzeFile').value = '';
+            },
+            
+            analyzeFile(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const fileBtn = document.querySelector('.file-input-btn');
+                const fileStatus = document.getElementById('fileStatus');
+                
+                fileBtn.classList.add('active');
+                fileStatus.textContent = '📂 분석 중...';
+                fileStatus.classList.remove('selected');
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const text = new TextDecoder('utf-8', { fatal: false }).decode(data);
+                        
+                        // 현재 연도 자동 감지
+                        const today = new Date();
+                        const currentYear = today.getFullYear();
+                        
+                        // 파일명에서 정보 추출
+                        const fileName = file.name.replace('.xlsx', '').replace('.xls', '');
+                        const parts = fileName.split('_');
+                        
+                        // 기본값 (현재 연도 적용)
+                        let result = {
+                            fileName: file.name,
+                            file: file,  // 파일 객체 저장!
+                            brand: '비바라비다',
+                            promotionName: fileName,
+                            startDate: currentYear + '-06-01',
+                            endDate: currentYear + '-06-11',
+                            platform: '29cm',
+                            skuCount: 100
+                        };
+                        
+                        // 파일명 분석
+                        if (fileName.includes('장마대처')) {
+                            if (fileName.includes('브랜드릴레이') || fileName.includes('브랜드')) {
+                                result.promotionName = '장마대처_브랜드 릴레이세일';
+                                result.startDate = currentYear + '-06-15';
+                                result.endDate = currentYear + '-06-21';
+                            } else if (fileName.includes('일반')) {
+                                result.promotionName = '장마대처_일반할인';
+                                result.startDate = currentYear + '-06-15';
+                                result.endDate = currentYear + '-06-27';
+                            }
+                        }
+                        
+                        // A1 셀 텍스트에서 날짜 정보 추출 (있으면 덮어쓰기)
+                        const datePattern = /\\d{1,2}[\\/\\.]\\s*\\d{1,2}[\\(월화수목금토일\\)\\s~-]+\\d{1,2}[\\/\\.]\\s*\\d{1,2}/g;
+                        const titlePattern = /기획전 명\\s*:\\s*([^\\n]+)/;
+                        
+                        const titleMatch = text.match(titlePattern);
+                        if (titleMatch && titleMatch[1]) {
+                            result.promotionName = titleMatch[1].trim();
+                        }
+                        
+                        const dates = text.match(datePattern);
+                        if (dates && dates.length > 0) {
+                            const lastDate = dates[dates.length - 1];
+                            const numbers = lastDate.match(/\\d+/g);
+                            if (numbers && numbers.length >= 4) {
+                                const startMonth = numbers[0].padStart(2, '0');
+                                const startDay = numbers[1].padStart(2, '0');
+                                const endMonth = numbers[2].padStart(2, '0');
+                                const endDay = numbers[3].padStart(2, '0');
+                                
+                                result.startDate = currentYear + '-' + startMonth + '-' + startDay;
+                                result.endDate = currentYear + '-' + endMonth + '-' + endDay;
+                            }
+                        }
+                        
+                        this.analyzedData = result;
+                        this.showAnalysisResult(result);
+                        fileStatus.textContent = '✓ ' + file.name + ' 분석 완료!';
+                        fileStatus.classList.add('selected');
+                    } catch (err) {
+                        console.log('분석 오류:', err);
+                        fileStatus.textContent = '❌ 분석 실패 - 파일 형식 확인';
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            },
+            
+            showAnalysisResult(data) {
+                const html = `
+                    <div class="analysis-info">
+                        <div class="form-label" style="margin-bottom: 0.8rem;">추출된 정보</div>
+                        <div class="info-row">
+                            <span class="info-label">🏢 브랜드</span>
+                            <input type="text" id="ana-brand" value="${data.brand}">
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">📢 기획전</span>
+                            <input type="text" id="ana-promo" value="${data.promotionName}">
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">📅 시작일</span>
+                            <input type="date" id="ana-start" value="${data.startDate}">
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">📅 종료일</span>
+                            <input type="date" id="ana-end" value="${data.endDate}">
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">🛍️ 플랫폼</span>
+                            <select id="ana-platform">
+                                <option value="29cm" ${data.platform === '29cm' ? 'selected' : ''}>29CM</option>
+                                <option value="musinsa" ${data.platform === 'musinsa' ? 'selected' : ''}>무신사</option>
+                                <option value="own" ${data.platform === 'own' ? 'selected' : ''}>자사몰</option>
+                                <option value="global" ${data.platform === 'global' ? 'selected' : ''}>글로벌</option>
+                            </select>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">📊 상품 수</span>
+                            <span class="info-value">${data.skuCount}개</span>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('analysisResult').innerHTML = html;
+                document.getElementById('registerBtn').style.display = 'block';
+            },
+            
+            registerFromFile() {
+                const brand = document.getElementById('ana-brand')?.value || this.analyzedData.brand;
+                const promotionName = document.getElementById('ana-promo')?.value || this.analyzedData.promotionName;
+                const startDate = document.getElementById('ana-start')?.value || this.analyzedData.startDate;
+                const endDate = document.getElementById('ana-end')?.value || this.analyzedData.endDate;
+                const platform = document.getElementById('ana-platform')?.value || this.analyzedData.platform;
+                
+                if (!promotionName || !startDate || !endDate) {
+                    alert('필수 항목을 입력하세요');
+                    return;
+                }
+                
+                if (startDate > endDate) {
+                    alert('시작날짜가 종료날짜보다 늦을 수 없습니다');
+                    return;
+                }
+                
+                const platformMap = {
+                    '29cm': '29CM',
+                    'musinsa': '무신사',
+                    'own': '자사몰',
+                    'global': '글로벌'
+                };
+                
+                const newPromo = {
+                    id: 'file_' + Date.now(),
+                    name: promotionName,
+                    start: startDate,
+                    end: endDate,
+                    platform: platformMap[platform],
+                    key: platform,
+                    desc: this.analyzedData.fileName + ' (' + this.analyzedData.skuCount + '개)',
+                    file: this.analyzedData.fileName,
+                    sales: 0,
+                    target: 0,
+                    feedback: ''
+                };
+                
+                this.data.push(newPromo);
+                
+                // 파일 업로드 (analyzeFile에서 저장된 파일 사용)
+                if (this.analyzedData && this.analyzedData.file) {
+                    this.uploadFile(newPromo.id, this.analyzedData.file);
+                }
+                
+                // Local Storage에 저장 (즉시)
+                this.saveToLocalStorage();
+                
+                // Supabase에 저장 (백그라운드)
+                this.saveToSupabase(newPromo);
+                
+                alert('✓ ' + promotionName + ' 프로모션이 등록되었습니다!');
+                this.closeFileUpload();
+                this.render();
+            },
+            
+            openSettings() {
+                document.getElementById('color-29cm').value = this.colors['29cm'];
+                document.getElementById('color-musinsa').value = this.colors['musinsa'];
+                document.getElementById('color-own').value = this.colors['own'];
+                document.getElementById('color-global').value = this.colors['global'];
+                document.getElementById('settingsModal').classList.add('show');
+            },
+            
+            closeSettings() {
+                document.getElementById('settingsModal').classList.remove('show');
+            },
+            
+            updateColor(platform, color) {
+                this.colors[platform] = color;
+                document.getElementById('color-' + platform + '-text').textContent = color.toUpperCase();
+                localStorage.setItem('promoColors', JSON.stringify(this.colors));
+                this.applyColors();
+                this.render();
+            },
+            
+            resetColors() {
+                this.colors = {
+                    '29cm': '#1976d2',
+                    'musinsa': '#388e3c',
+                    'own': '#f57c00',
+                    'global': '#7b1fa2'
+                };
+                localStorage.removeItem('promoColors');
+                this.applyColors();
+                this.openSettings();
+                this.render();
+            },
+            
+            getShort: k => ({'29cm':'29CM','musinsa':'무신사','own':'자사','global':'글로'}[k] || k),
+            
+            getPromoText(p) {
+                if (this.view === 'brief') {
+                    return this.getShort(p.key);
+                } else if (this.view === 'standard') {
+                    return this.getShort(p.key) + ' - ' + p.name;
+                } else {
+                    return this.getShort(p.key) + ' - ' + p.name + (p.desc ? '\n' + p.desc : '');
+                }
+            },
+            
+            addDays(dateStr, days) {
+                const date = new Date(dateStr);
+                date.setDate(date.getDate() + days);
+                return date.toISOString().split('T')[0];
+            },
+            
+            getPromoPosition(promoId, date) {
+                const p = this.data.find(x => x.id === promoId);
+                if (!p) return 'single';
+                
+                const prevDate = this.addDays(date, -1);
+                const nextDate = this.addDays(date, 1);
+                
+                const hasPrev = p.start <= prevDate && prevDate <= p.end;
+                const hasNext = p.start <= nextDate && nextDate <= p.end;
+                
+                if (!hasPrev && !hasNext) return 'single';
+                if (!hasPrev && hasNext) return 'first';
+                if (hasPrev && !hasNext) return 'last';
+                if (hasPrev && hasNext) return 'middle';
+                
+                return 'single';
+            },
+            
+            prevMonth() { this.month--; if (this.month < 1) { this.month = 12; this.year--; } this.render(); },
+            nextMonth() { this.month++; if (this.month > 12) { this.month = 1; this.year++; } this.render(); },
+            
+            setView(v) {
+                this.view = v;
+                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById('btn-' + v).classList.add('active');
+                this.render();
+            },
+            
+            setFilter(f) {
+                this.filter = f;
+                const labels = {'all':'전체','29cm':'29CM','musinsa':'무신사','own':'자사몰','global':'글로벌'};
+                document.querySelectorAll('#page-calendar .channel-btn').forEach(b => {
+                    b.classList.toggle('active', b.textContent.trim() === labels[f]);
+                });
+                this.render();
+            },
+
+            // ===== 페이지 전환 =====
+            showPage(page) {
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                document.getElementById('page-' + page).classList.add('active');
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById('nav-' + page).classList.add('active');
+
+                // 캘린더 전용 우측 버튼(파일분석/뷰/설정)은 캘린더에서만 표시
+                const right = document.querySelector('.controls-right');
+                if (right) right.style.visibility = (page === 'calendar') ? 'visible' : 'hidden';
+                // 월 이동 컨트롤도 캘린더에서만
+                const monthCtl = document.querySelector('.month-control');
+                if (monthCtl) monthCtl.style.visibility = (page === 'calendar') ? 'visible' : 'hidden';
+
+                if (page === 'analysis') this.renderAnalysis();
+            },
+            
+            render() {
+                const months = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+                document.getElementById('monthLabel').textContent = this.year + '년 ' + months[this.month - 1];
+                
+                const fd = new Date(this.year, this.month - 1, 1).getDay();
+                const ld = new Date(this.year, this.month, 0).getDate();
+                let html = '';
+                
+                for (let i = 0; i < fd; i++) html += '<div class="day-cell empty"></div>';
+                
+                for (let d = 1; d <= ld; d++) {
+                    const date = this.year + '-' + String(this.month).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+                    const isToday = date === this.todayStr;
+                    
+                    const promos = this.data.filter(p => {
+                        if (this.filter !== 'all' && p.key !== this.filter) return false;
+                        return p.start <= date && date <= p.end;
+                    });
+                    
+                    let cell = '<div class="day-cell' + (promos.length ? ' has-promo' : '') + (isToday ? ' today' : '') + '" onclick="cal.dayClick(\''+date+'\')">';
+                    cell += '<div style="color: #999; font-size: 13px; font-weight: 700; margin-bottom: 0.3rem;">' + d + '</div>';
+                    promos.forEach(p => {
+                        const txt = this.getPromoText(p);
+                        const col = {'29cm':'b-29cm','musinsa':'b-musinsa','own':'b-own','global':'b-global'}[p.key] || 'b-29cm';
+                        const pos = this.getPromoPosition(p.id, date);
+                        const lines = txt.split('\n').length;
+                        const height = Math.min(lines, 3) * 1.3 + 0.4;
+                        cell += '<div class="promo-item ' + col + ' ' + pos + '" onclick="cal.showEdit(\''+p.id+'\'); event.stopPropagation();" title="'+p.name+'" style="min-height: ' + height + 'em; white-space: pre-wrap; word-break: break-word;">' + txt.split('\n').slice(0,3).join('\n') + '</div>';
+                    });
+                    cell += '</div>';
+                    html += cell;
+                }
+                
+                document.getElementById('calGrid').innerHTML = html;
+            },
+            
+            dayClick(date) {
+                this.selectDate = date;
+                this.editId = null;
+                this.selectedFile = null;
+                this.showForm(true);
+            },
+            
+            showEdit(id) {
+                this.editId = id;
+                this.selectedFile = null;
+                this.showForm(false);
+            },
+            
+            showForm(isNew) {
+                const p = isNew ? null : this.data.find(x => x.id === this.editId);
+                document.getElementById('modalTitle').textContent = isNew ? '프로모션 추가' : p.name;
+                
+                let html = '';
+                if (isNew) {
+                    html = `
+                        <div class="form-group">
+                            <div class="form-label">프로모션명</div>
+                            <input type="text" class="form-input" id="inp-name" placeholder="프로모션 이름">
+                        </div>
+                        <div class="form-group">
+                            <div class="form-label">플랫폼</div>
+                            <select class="form-input" id="inp-platform">
+                                <option value="29cm">29CM</option>
+                                <option value="musinsa">무신사</option>
+                                <option value="own">자사몰</option>
+                                <option value="global">글로벌</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <div class="form-label">시작날짜</div>
+                            <input type="date" class="form-input" id="inp-start" value="${this.selectDate}">
+                        </div>
+                        <div class="form-group">
+                            <div class="form-label">종료날짜</div>
+                            <input type="date" class="form-input" id="inp-end" value="${this.selectDate}">
+                        </div>
+                        <div class="form-group">
+                            <div class="form-label">내용</div>
+                            <textarea class="form-input" id="inp-desc" style="height: 80px;" placeholder="프로모션 내용"></textarea>
+                        </div>
+                    `;
+                } else {
+                    const rate = p.target ? Math.round(p.sales / p.target * 100) : 0;
+                    html = `
+                        <div class="form-group">
+                            <div class="form-label">프로모션명</div>
+                            <input type="text" class="form-input" id="inp-name" value="${p.name}">
+                        </div>
+                        <div class="form-group">
+                            <div class="form-label">플랫폼</div>
+                            <div class="form-value">${p.platform}</div>
+                        </div>
+                        <div class="form-group">
+                            <div class="form-label">시작날짜</div>
+                            <input type="date" class="form-input" id="inp-start" value="${p.start}">
+                        </div>
+                        <div class="form-group">
+                            <div class="form-label">종료날짜</div>
+                            <input type="date" class="form-input" id="inp-end" value="${p.end}">
+                        </div>
+                        <div class="form-group">
+                            <div class="form-label">내용</div>
+                            <textarea class="form-input" id="inp-desc" style="height: 80px;">${p.desc || ''}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <div class="form-label">목표매출</div>
+                            <div class="form-value">₩${(p.target || 0).toLocaleString()}</div>
+                        </div>
+                        <div class="form-group">
+                            <div class="form-label">달성매출</div>
+                            <div class="form-value">₩${(p.sales || 0).toLocaleString()} (${rate}%)</div>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('modalContent').innerHTML = html;
+                document.getElementById('saveBtn').style.display = isNew ? 'block' : 'none';
+                
+                // 버튼 영역 초기화
+                const formBtns = document.querySelector('.form-buttons');
+                
+                // 기존 버튼 제거 (취소, 저장 제외)
+                const deleteBtn = formBtns.querySelector('#deleteBtn');
+                const downloadBtn = formBtns.querySelector('#downloadBtn');
+                if (deleteBtn) deleteBtn.remove();
+                if (downloadBtn) downloadBtn.remove();
+                
+                // 수정 모드에서 추가 버튼 추가
+                if (!isNew && this.editId) {
+                    // 삭제 버튼
+                    const delBtn = document.createElement('button');
+                    delBtn.id = 'deleteBtn';
+                    delBtn.className = 'btn btn-danger';
+                    delBtn.textContent = '🗑️ 삭제';
+                    delBtn.style.background = '#dc3545';
+                    delBtn.onclick = () => this.deletePromo(this.editId);
+                    formBtns.appendChild(delBtn);
+                    
+                    // 파일 다운로드 버튼 (파일이 있으면)
+                    if (fileStorage[this.editId]) {
+                        const dlBtn = document.createElement('button');
+                        dlBtn.id = 'downloadBtn';
+                        dlBtn.className = 'btn btn-info';
+                        dlBtn.textContent = '📥 파일 다운로드';
+                        dlBtn.style.background = '#17a2b8';
+                        dlBtn.onclick = () => this.downloadFile(this.editId);
+                        formBtns.appendChild(dlBtn);
+                    }
+                }
+                
+                document.getElementById('modal').classList.add('show');
+            },
+            
+            save() {
+                const name = document.getElementById('inp-name').value.trim();
+                const start = document.getElementById('inp-start').value;
+                const end = document.getElementById('inp-end').value;
+                const desc = document.getElementById('inp-desc').value;
+                
+                if (!name || !start || !end) { alert('필수 항목을 입력하세요'); return; }
+                if (start > end) { alert('시작날짜가 종료날짜보다 늦을 수 없습니다'); return; }
+                
+                if (this.editId) {
+                    const p = this.data.find(x => x.id === this.editId);
+                    if (p) { 
+                        p.name = name; 
+                        p.start = start; 
+                        p.end = end; 
+                        p.desc = desc;
+                        
+                        // Local Storage에 저장
+                        this.saveToLocalStorage();
+                        
+                        // Supabase 업데이트 (백그라운드)
+                        console.log('프로모션 수정됨:', name);
+                    }
+                } else {
+                    const platform = document.getElementById('inp-platform').value;
+                    const platformMap = {'29cm':'29CM','musinsa':'무신사','own':'자사몰','global':'글로벌'};
+                    
+                    const newPromo = {
+                        id: 'new_' + Date.now(), 
+                        name, 
+                        start, 
+                        end, 
+                        platform: platformMap[platform], 
+                        key: platform, 
+                        desc, 
+                        file: '', 
+                        sales: 0, 
+                        target: 0, 
+                        feedback: ''
+                    };
+                    
+                    this.data.push(newPromo);
+                    
+                    // Local Storage에 저장 (즉시)
+                    this.saveToLocalStorage();
+                    
+                    // Supabase에 저장 (백그라운드)
+                    this.saveToSupabase(newPromo);
+                }
+                
+                this.closeModal();
+                this.render();
+            },
+            
+            // Local Storage에 저장
+            saveToLocalStorage() {
+                try {
+                    const localData = this.data.filter(p => !p.id.startsWith('sb_'));
+                    localStorage.setItem('vlvd_promotions', JSON.stringify(localData));
+                    console.log('✓ Local Storage에 저장됨: ' + localData.length + '개');
+                } catch (err) {
+                    console.log('Local Storage 저장 오류:', err);
+                }
+            },
+            
+            // Local Storage에서 로드
+            loadFromLocalStorage() {
+                try {
+                    const saved = localStorage.getItem('vlvd_promotions');
+                    if (saved) {
+                        const localData = JSON.parse(saved);
+                        this.data = localData;
+                        console.log('✓ Local Storage에서 로드됨: ' + localData.length + '개');
+                        return true;
+                    }
+                } catch (err) {
+                    console.log('Local Storage 로드 오류:', err);
+                }
+                return false;
+            },
+            
+            // 파일 업로드
+            uploadFile(promoId, file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const fileData = {
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                        data: e.target.result // Base64 인코딩
+                    };
+                    
+                    fileStorage[promoId] = fileData;
+                    console.log('✓ 파일 저장됨:', file.name);
+                };
+                reader.readAsArrayBuffer(file);
+            },
+            
+            // 파일 다운로드
+            downloadFile(promoId) {
+                const fileData = fileStorage[promoId];
+                if (!fileData) {
+                    alert('파일이 없습니다');
+                    return;
+                }
+                
+                const blob = new Blob([fileData.data], { type: fileData.type });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileData.name;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                console.log('✓ 파일 다운로드:', fileData.name);
+            },
+            
+            // 프로모션 삭제
+            async deletePromo(id) {
+                if (!confirm('정말 삭제하시겠습니까?')) {
+                    return;
+                }
+                
+                // 데이터에서 삭제
+                this.data = this.data.filter(p => p.id !== id);
+                
+                // Local Storage 저장
+                this.saveToLocalStorage();
+                
+                // Supabase에서 삭제
+                if (supabaseClient && id.startsWith('sb_')) {
+                    const supabaseId = id.replace('sb_', '');
+                    try {
+                        const { error } = await supabaseClient
+                            .from(TABLE_NAME)
+                            .delete()
+                            .eq('id', supabaseId);
+                        
+                        if (!error) {
+                            console.log('✓ Supabase에서 삭제됨');
+                        }
+                    } catch (err) {
+                        console.log('Supabase 삭제 오류:', err);
+                    }
+                }
+                
+                // 파일도 삭제
+                delete fileStorage[id];
+                
+                alert('프로모션이 삭제되었습니다');
+                this.render();
+            },
+            
+            closeModal() { 
+                document.getElementById('modal').classList.remove('show');
+            },
+
+            // ============================================================
+            // ===== 프로모션 분석 =====
+            // ============================================================
+
+            // 프로모션명에서 유형 키워드 추출 (유사도 그룹화용)
+            extractType(name) {
+                let n = (name || '').toLowerCase();
+                // 숫자, 주차, 날짜, 괄호내용 등 변동 요소 제거
+                n = n.replace(/\([^)]*\)/g, ' ');           // 괄호 제거
+                n = n.replace(/[0-9]+\s*월/g, ' ');          // n월
+                n = n.replace(/[0-9]+\s*주차?/g, ' ');       // n주차
+                n = n.replace(/[0-9]+\s*일/g, ' ');          // n일
+                n = n.replace(/[0-9]{2,4}[-./][0-9]{1,2}([-./][0-9]{1,2})?/g, ' '); // 날짜
+                n = n.replace(/[0-9]+/g, ' ');               // 남은 숫자
+                n = n.replace(/[~,:&\/]/g, ' ');
+                n = n.replace(/\s+/g, ' ').trim();
+                // 대표 유형 키워드 매칭 (우선순위 순)
+                const keywords = ['주말특가','타임세일','하루특가','이구위크','이구데이','브랜드위크',
+                    '멤버스데이','블랙프라이데이','블프','기획전','클리어런스','시즌오프','빅세일',
+                    '장바구니','쿠폰','위크','세일','특가','캠페인','페스티벌'];
+                for (const k of keywords) {
+                    if (n.replace(/\s/g,'').includes(k)) return k;
+                }
+                return n || '기타';
+            },
+
+            // ===== 실제 매출 연동 (vlvd_daily_sales View) =====
+            // 내부 채널키 → View의 channel(한글) 매핑
+            channelToKey: { '무신사':'musinsa', '29CM':'29cm', '자사몰':'own' },
+
+            // View에서 일별 매출 로드 (한 번만)
+            async loadDailySales() {
+                if (this.dailySalesLoaded) return true;
+                if (!supabaseClient) { await new Promise(r=>setTimeout(r,800)); return this.loadDailySales(); }
+                try {
+                    // View는 ~수천행이므로 페이지네이션으로 전부 가져옴
+                    let all = [], from = 0, page = 1000;
+                    while (true) {
+                        const { data, error } = await supabaseClient
+                            .from('vlvd_daily_sales')
+                            .select('channel,sale_date,revenue')
+                            .range(from, from + page - 1);
+                        if (error) { console.error('일별매출 로드 오류:', error); this.dailySales = []; return false; }
+                        if (!data || data.length === 0) break;
+                        all = all.concat(data);
+                        if (data.length < page) break;
+                        from += page;
+                        if (from > 100000) break; // 안전장치
+                    }
+                    // 채널키별로 {date: revenue} 맵 구성
+                    const map = { 'musinsa':{}, '29cm':{}, 'own':{} };
+                    all.forEach(r => {
+                        const k = this.channelToKey[r.channel];
+                        if (!k) return;
+                        const d = (r.sale_date || '').slice(0,10);
+                        map[k][d] = (map[k][d] || 0) + (Number(r.revenue) || 0);
+                    });
+                    this.dailySalesMap = map;
+                    this.dailySales = all;
+                    this.dailySalesLoaded = true;
+                    console.log('✓ 실제 매출 로드: ' + all.length + '일치 (채널×날짜)');
+                    return true;
+                } catch (err) {
+                    console.error('일별매출 로드 예외:', err);
+                    this.dailySales = []; return false;
+                }
+            },
+
+            // 한 프로모션의 실제 매출 = 채널 일치 + 기간 내 일별매출 합산
+            actualSalesFor(promo) {
+                if (!this.dailySalesMap) return 0;
+                const k = promo.key;
+                const m = this.dailySalesMap[k];
+                if (!m) return 0; // 글로벌 등 매출소스 없는 채널
+                const start = (promo.start || '').slice(0,10);
+                const end = (promo.end || '').slice(0,10);
+                if (!start || !end) return 0;
+                let sum = 0;
+                for (const d in m) {
+                    if (d >= start && d <= end) sum += m[d];
+                }
+                return Math.round(sum);
+            },
+
+            // data 배열의 각 프로모션에 actualSales 채우기
+            applyActualSales() {
+                if (!this.dailySalesMap) return;
+                this.data.forEach(p => {
+                    p.actualSales = this.actualSalesFor(p);
+                });
+            },
+
+            // 데이터를 플랫폼+유형으로 그룹화
+            buildGroups() {
+                const groups = {};
+                this.data.forEach(p => {
+                    const type = this.extractType(p.name);
+                    const key = (p.key || 'other') + '::' + type;
+                    if (!groups[key]) {
+                        groups[key] = { key, platform: p.platform, platformKey: p.key || 'other',
+                            type, items: [] };
+                    }
+                    groups[key].items.push(p);
+                });
+                // 통계 계산 (실제매출 우선: actualSales가 있으면 그걸, 없으면 수동 sales)
+                const eff = (i) => (i.actualSales != null && i.actualSales > 0) ? i.actualSales : (i.sales || 0);
+                Object.values(groups).forEach(g => {
+                    const withSales = g.items.filter(i => eff(i) > 0);
+                    g.count = g.items.length;
+                    g.salesCount = withSales.length;
+                    g.totalSales = g.items.reduce((s,i)=>s+eff(i),0);
+                    g.avgSales = withSales.length ? Math.round(g.totalSales / withSales.length) : 0;
+                    g.totalTarget = g.items.reduce((s,i)=>s+(i.target||0),0);
+                    // 목표 대비 달성률 (목표가 있는 건만)
+                    const withTarget = g.items.filter(i => (i.target||0) > 0);
+                    if (withTarget.length) {
+                        const ach = withTarget.reduce((s,i)=>s+eff(i),0);
+                        const tgt = withTarget.reduce((s,i)=>s+(i.target||0),0);
+                        g.achieveRate = tgt ? Math.round(ach/tgt*100) : null;
+                    } else g.achieveRate = null;
+                    // 매출 표준편차 (변동성)
+                    if (withSales.length > 1) {
+                        const mean = g.avgSales;
+                        const variance = withSales.reduce((s,i)=>s+Math.pow(eff(i)-mean,2),0)/withSales.length;
+                        g.stdev = Math.round(Math.sqrt(variance));
+                    } else g.stdev = 0;
+                });
+                return groups;
+            },
+
+            platColor(key) {
+                return this.colors[key] || '#888';
+            },
+            platName(key) {
+                return {'29cm':'29CM','musinsa':'무신사','own':'자사몰','global':'글로벌'}[key] || '기타';
+            },
+
+            async renderAnalysis() {
+                // 실제 매출(View) 로드 후 각 프로모션에 적용
+                const wrap = document.getElementById('analysisWrap');
+                if (!this.dailySalesLoaded && wrap) {
+                    wrap.innerHTML = '<div class="ana-empty">실제 매출 데이터를 불러오는 중...</div>';
+                }
+                await this.loadDailySales();
+                this.applyActualSales();
+
+                const groups = this.buildGroups();
+                const groupArr = Object.values(groups);
+
+                // 전체 통계 (실제매출 우선)
+                const eff = (p) => (p.actualSales != null && p.actualSales > 0) ? p.actualSales : (p.sales || 0);
+                const allWithSales = this.data.filter(p => eff(p) > 0);
+                const totalSales = this.data.reduce((s,p)=>s+eff(p),0);
+                const avgSales = allWithSales.length ? Math.round(totalSales/allWithSales.length) : 0;
+                const totalPromos = this.data.length;
+                const realCount = this.data.filter(p => (p.actualSales||0) > 0).length;
+
+                let html = '';
+
+                // --- 동기화 상태 안내 ---
+                if (allWithSales.length === 0) {
+                    html += `<div class="analysis-section" style="border-color:#ffd; background:#fffdf5;">
+                        <h2>⚠️ 매출 데이터 없음</h2>
+                        <div class="sub" style="margin-bottom:0;">실제 매출 데이터를 불러오지 못했습니다.
+                        네트워크 상태를 확인하거나 잠시 후 다시 시도해주세요.</div>
+                    </div>`;
+                }
+
+                // --- 1. 전체 요약 ---
+                html += `<div class="analysis-section">
+                    <h2>📊 프로모션 효율 분석</h2>
+                    <div class="sub">무신사 · 29CM · 자사몰 실제 판매 데이터(취소·교환 제외, 판매가 기준)를 프로모션 기간에 매칭해 집계합니다.</div>
+                    <div class="stat-cards">
+                        <div class="stat-card"><div class="label">총 프로모션</div><div class="value">${totalPromos}건</div></div>
+                        <div class="stat-card"><div class="label">매출 기록 건수</div><div class="value">${allWithSales.length}건</div></div>
+                        <div class="stat-card"><div class="label">누적 매출</div><div class="value small">₩${totalSales.toLocaleString()}</div></div>
+                        <div class="stat-card"><div class="label">건당 평균 매출</div><div class="value small">₩${avgSales.toLocaleString()}</div></div>
+                    </div>`;
+
+                // 효율 순위 테이블 (매출 기록 있는 그룹만, 평균매출 내림차순)
+                const ranked = groupArr.filter(g => g.salesCount > 0).sort((a,b)=>b.avgSales-a.avgSales);
+                if (ranked.length) {
+                    const maxAvg = ranked[0].avgSales || 1;
+                    html += `<div class="table-scroll"><table class="ana-table">
+                        <thead><tr>
+                            <th>플랫폼</th><th>프로모션 유형</th>
+                            <th class="num">진행</th><th class="num">매출기록</th>
+                            <th class="num">평균매출</th><th>효율</th>
+                            <th class="num">목표달성률</th>
+                        </tr></thead><tbody>`;
+                    ranked.forEach(g => {
+                        const barW = Math.round((g.avgSales/maxAvg)*100);
+                        html += `<tr>
+                            <td><span class="badge" style="background:${this.platColor(g.platformKey)}">${this.platName(g.platformKey)}</span></td>
+                            <td>${g.type}</td>
+                            <td class="num">${g.count}</td>
+                            <td class="num">${g.salesCount}</td>
+                            <td class="num">₩${g.avgSales.toLocaleString()}</td>
+                            <td><div class="bar-track"><div class="bar-fill" style="width:${barW}%;background:${this.platColor(g.platformKey)}"></div></div></td>
+                            <td class="num">${g.achieveRate!=null ? g.achieveRate+'%' : '-'}</td>
+                        </tr>`;
+                    });
+                    html += `</tbody></table></div>`;
+                } else {
+                    html += `<div class="ana-empty">매출이 기록된 프로모션이 아직 없습니다.</div>`;
+                }
+                html += `</div>`;
+
+                // --- 2. 기대 매출 측정 ---
+                html += `<div class="analysis-section">
+                    <h2>🔮 다음 프로모션 기대 매출 측정</h2>
+                    <div class="sub">플랫폼 + 프로모션명 유사도로 묶은 반복 프로모션 그룹입니다.
+                    같은 유형의 과거 매출 평균을 기대 매출로 예측합니다. (2회 이상 진행한 그룹만 표시)</div>`;
+
+                const repeatGroups = groupArr.filter(g => g.count >= 2)
+                    .sort((a,b)=> b.avgSales - a.avgSales || b.count - a.count);
+
+                if (repeatGroups.length) {
+                    html += `<div class="table-scroll"><table class="ana-table">
+                        <thead><tr>
+                            <th>플랫폼</th><th>유형</th>
+                            <th class="num">진행횟수</th><th class="num">매출기록</th>
+                            <th class="num">평균(기대매출)</th><th class="num">변동성(±)</th>
+                            <th></th>
+                        </tr></thead><tbody>`;
+                    repeatGroups.forEach((g,idx) => {
+                        const canForecast = g.salesCount >= 1;
+                        html += `<tr class="group-row" onclick="cal.toggleGroupDetail('grp${idx}')">
+                            <td><span class="badge" style="background:${this.platColor(g.platformKey)}">${this.platName(g.platformKey)}</span></td>
+                            <td>${g.type} <span style="color:#bbb">▾</span></td>
+                            <td class="num">${g.count}</td>
+                            <td class="num">${g.salesCount}</td>
+                            <td class="num">${canForecast ? '₩'+g.avgSales.toLocaleString() : '<span style="color:#bbb">데이터 부족</span>'}</td>
+                            <td class="num">${g.stdev ? '₩'+g.stdev.toLocaleString() : '-'}</td>
+                            <td class="num">${canForecast ? `<button class="save-forecast-btn" onclick="event.stopPropagation();cal.saveForecast('${g.key.replace(/'/g,"")}',${g.avgSales},${g.salesCount},${g.avgSales})">예측저장</button>` : ''}</td>
+                        </tr>`;
+                        // 상세 (숨김)
+                        html += `<tr class="group-detail" id="grp${idx}" style="display:none"><td colspan="7"><div class="detail-inner">
+                            <table><tbody>`;
+                        g.items.sort((a,b)=>(a.start>b.start?1:-1)).forEach(i => {
+                            html += `<tr>
+                                <td style="width:40%">${i.name}</td>
+                                <td style="color:#999">${i.start} ~ ${i.end}</td>
+                                <td class="num" style="text-align:right">${((i.actualSales!=null&&i.actualSales>0)?i.actualSales:(i.sales||0))>0 ? '₩'+(((i.actualSales!=null&&i.actualSales>0)?i.actualSales:(i.sales||0))).toLocaleString() : '<span style="color:#ccc">미기록</span>'}</td>
+                            </tr>`;
+                        });
+                        html += `</tbody></table></div></td></tr>`;
+                    });
+                    html += `</tbody></table></div>`;
+                } else {
+                    html += `<div class="ana-empty">2회 이상 반복된 프로모션 그룹이 없습니다.</div>`;
+                }
+                html += `</div>`;
+
+                // --- 3. 저장된 예측 기록 ---
+                html += `<div class="analysis-section">
+                    <h2>📁 저장된 기대매출 예측 기록</h2>
+                    <div class="sub">예측저장 버튼으로 기록한 값입니다. 나중에 실제 매출과 비교해 예측 정확도를 추적할 수 있습니다.</div>
+                    <div id="forecastList"><div class="ana-empty">불러오는 중...</div></div>
+                </div>`;
+
+                document.getElementById('analysisWrap').innerHTML = html;
+                this.loadForecasts();
+            },
+
+            toggleGroupDetail(id) {
+                const el = document.getElementById(id);
+                if (el) el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+            },
+
+            // 기대매출 예측 저장 (Supabase)
+            async saveForecast(groupKey, forecast, basisCount, basisAvg) {
+                if (!supabaseClient) {
+                    alert('Supabase 연결 대기 중입니다. 잠시 후 다시 시도해주세요.');
+                    return;
+                }
+                const [platformKey, promoType] = groupKey.split('::');
+                try {
+                    const { error } = await supabaseClient
+                        .from('vlvd_promotion_forecasts')
+                        .insert([{
+                            group_key: groupKey,
+                            platform: this.platName(platformKey),
+                            promo_type: promoType,
+                            forecast: forecast,
+                            basis_count: basisCount,
+                            basis_avg: basisAvg,
+                            note: ''
+                        }]);
+                    if (error) {
+                        console.error('예측 저장 오류:', error);
+                        alert('저장 실패: ' + (error.message || '테이블이 없을 수 있습니다. SQL로 vlvd_promotion_forecasts 테이블을 먼저 생성하세요.'));
+                        return;
+                    }
+                    alert('✓ 기대매출 ₩' + forecast.toLocaleString() + ' 예측이 저장되었습니다.');
+                    this.loadForecasts();
+                } catch (err) {
+                    console.error(err);
+                    alert('저장 중 오류가 발생했습니다.');
+                }
+            },
+
+            // 저장된 예측 불러오기
+            async loadForecasts() {
+                const listEl = document.getElementById('forecastList');
+                if (!listEl) return;
+                if (!supabaseClient) {
+                    setTimeout(() => this.loadForecasts(), 800);
+                    return;
+                }
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('vlvd_promotion_forecasts')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+                    if (error) {
+                        listEl.innerHTML = `<div class="ana-empty">예측 테이블을 읽을 수 없습니다.<br>
+                            <span style="font-size:12px">vlvd_promotion_forecasts 테이블을 SQL로 생성하면 표시됩니다.</span></div>`;
+                        return;
+                    }
+                    if (!data || data.length === 0) {
+                        listEl.innerHTML = `<div class="ana-empty">아직 저장된 예측이 없습니다.</div>`;
+                        return;
+                    }
+                    let h = `<div class="table-scroll"><table class="ana-table">
+                        <thead><tr>
+                            <th>저장일</th><th>플랫폼</th><th>유형</th>
+                            <th class="num">기대매출</th><th class="num">근거 건수</th><th></th>
+                        </tr></thead><tbody>`;
+                    data.forEach(f => {
+                        const d = f.created_at ? new Date(f.created_at).toLocaleDateString('ko-KR') : '-';
+                        h += `<tr>
+                            <td style="color:#999">${d}</td>
+                            <td>${f.platform || '-'}</td>
+                            <td>${f.promo_type || '-'}</td>
+                            <td class="num">₩${(f.forecast||0).toLocaleString()}</td>
+                            <td class="num">${f.basis_count || 0}</td>
+                            <td class="num"><button class="save-forecast-btn" style="background:#dc3545" onclick="cal.deleteForecast(${f.id})">삭제</button></td>
+                        </tr>`;
+                    });
+                    h += `</tbody></table></div>`;
+                    listEl.innerHTML = h;
+                } catch (err) {
+                    listEl.innerHTML = `<div class="ana-empty">불러오기 오류</div>`;
+                }
+            },
+
+            async deleteForecast(id) {
+                if (!confirm('이 예측 기록을 삭제할까요?')) return;
+                try {
+                    const { error } = await supabaseClient
+                        .from('vlvd_promotion_forecasts').delete().eq('id', id);
+                    if (error) { alert('삭제 실패'); return; }
+                    this.loadForecasts();
+                } catch (err) { alert('삭제 중 오류'); }
+            }
+        };
+        
+        document.getElementById('analyzeFile').addEventListener('change', function(e) {
+            cal.analyzeFile(e);
+        });
+        
+        cal.init();
+    </script>
+</body>
+</html>
